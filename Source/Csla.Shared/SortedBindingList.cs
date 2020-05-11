@@ -526,7 +526,7 @@ namespace Csla
     /// </summary>
     public int Count
     {
-      get { return _list.Count; }
+      get { return _list?.Count ?? 0; }
     }
 
     bool System.Collections.ICollection.IsSynchronized

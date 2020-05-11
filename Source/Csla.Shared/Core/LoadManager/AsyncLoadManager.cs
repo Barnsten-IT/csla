@@ -36,7 +36,7 @@ namespace Csla.Core.LoadManager
       }
     }
 
-    private bool IsAlreadyLoadingProperty(IPropertyInfo property)
+    internal bool IsAlreadyLoadingProperty(IPropertyInfo property)
     {
       lock (_syncRoot)
       {

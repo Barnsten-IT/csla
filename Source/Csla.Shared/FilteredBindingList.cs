@@ -1019,7 +1019,7 @@ namespace Csla
     void ICancelAddNew.EndNew(int itemIndex)
     {
       ICancelAddNew can = _list as ICancelAddNew;
-      if (can != null)
+      if (can != null && itemIndex > -1)
         can.EndNew(OriginalIndex(itemIndex));
     }
 
