@@ -1,3 +1,11 @@
+**Custom Release**
+
+- Installera gpr `dotnet tool install gpr -g`
+- Sätt API key `gpr setApiKey <packageApiKey>`
+- Bygg csla i release
+- Bygg paket från Nuget mappen `./Build All.ps1`
+- Pusha med `./Github Push.ps1`
+
 CSLA .NET
 ====
 [![Build status](https://ci.appveyor.com/api/projects/status/jl2k3pjvtqca4lei/branch/master?svg=true)](https://ci.appveyor.com/project/rockfordlhotka/csla/branch/master)
