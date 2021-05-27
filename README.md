@@ -1,9 +1,12 @@
 **Custom Release**
 
+Första gången:
 - Installera gpr `dotnet tool install gpr -g`
-- Sätt API key `gpr setApiKey <packageApiKey>`
+- Sätt Github Package API key `gpr setApiKey <packageApiKey>`
+
+Vid ny release
 - Bygg csla i release
-- Bygg paket från Nuget mappen `./Build All.ps1`
+- Bygg paket från Nuget mappen, ändra 1 till nästa version `./Github Build.ps1 /PreRelease:1`
 - Pusha med `./Github Push.ps1`
 
 CSLA .NET
