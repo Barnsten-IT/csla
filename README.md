@@ -1,4 +1,8 @@
-**Custom Release**
+### Installera
+https://github.com/Barnsten-IT/Barnsten-Documents/blob/main/Nuget.md
+
+
+### Custom Release
 
 Första gången:
 - Installera gpr `dotnet tool install gpr -g`
