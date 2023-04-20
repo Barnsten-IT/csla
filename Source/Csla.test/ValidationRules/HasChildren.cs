@@ -13,6 +13,7 @@ using Csla.Serialization;
 using Csla.Serialization.Mobile;
 using Csla.Core;
 using System.Runtime.Serialization;
+using System.Threading.Tasks;
 
 namespace Csla.Test.ValidationRules
 {
@@ -26,14 +27,12 @@ namespace Csla.Test.ValidationRules
       set { SetProperty(IdProperty, value); }
     }
 
-    private static PropertyInfo<ChildList> ChildListProperty = RegisterProperty<ChildList>(c => c.ChildList, "Child list");
+    private static PropertyInfo<ChildList> ChildListProperty = RegisterProperty<ChildList>(c => c.ChildList, "Child list", null, RelationshipTypes.LazyLoad);
     public ChildList ChildList
     {
       get 
       {
-        if (!FieldManager.FieldExists(ChildListProperty))
-          LoadProperty(ChildListProperty, ChildList.NewList());
-        return GetProperty(ChildListProperty); 
+        return LazyGetProperty(ChildListProperty, () => GetDataPortal<ChildList>().Create()); 
       }
     }
 
@@ -76,5 +75,26 @@ namespace Csla.Test.ValidationRules
     {
       BusinessRules.CheckRules(ChildListProperty);
     }
+
+    [Create]
+    private async Task Create()
+    {
+      await BusinessRules.CheckRulesAsync();
+    }
+
+    #region Private Helper Methods
+
+    /// <summary>
+    /// Construct an instance of IDataPortal<typeparamref name="T"/>
+    /// </summary>
+    /// <typeparam name="T">The type which is to be accessed</typeparam>
+    /// <returns>An instance of IDataPortal for use in data access</returns>
+    private IDataPortal<T> GetDataPortal<T>() where T : class
+    {
+      return ApplicationContext.GetRequiredService<IDataPortal<T>>();
+    }
+
+    #endregion
+
   }
 }

@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Csla;
 using Csla.Configuration;
+using Csla.TestHelpers;
 #if !NUNIT
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 #else
@@ -27,59 +28,89 @@ namespace Csla.Test.DataPortal
   [TestClass]
   public class ChildDataPortalTests
   {
+    private static TestDIContext _testDIContext;
+
+    [ClassInitialize]
+    public static void ClassInitialize(TestContext context)
+    {
+      _testDIContext = TestDIContextFactory.CreateDefaultContext();
+    }
+
     [TestMethod]
     public async Task CreateChildNoCriteria()
     {
-      var child = await Csla.DataPortal.CreateChildAsync<TestChild>();
+      var dp = _testDIContext.CreateChildDataPortal<TestChild>();
+      var child = await dp.CreateChildAsync();
       Assert.AreEqual("none", child.Name);
     }
 
     [TestMethod]
     public async Task CreateChildInt32Criteria()
     {
-      var dp = new Server.ChildDataPortal();
-      var child = await dp.CreateAsync<TestChild>(123);
+      var dp = _testDIContext.CreateChildDataPortal<TestChild>();
+      var child = await dp.CreateChildAsync(123);
       Assert.AreEqual("Int32", child.Name);
     }
 
     [TestMethod]
     public async Task CreateChildMultipleCriteria()
     {
-      var dp = new Server.ChildDataPortal();
-      var child = await dp.CreateAsync<TestChild>("abc", 123);
+      var dp = _testDIContext.CreateChildDataPortal<TestChild>();
+      var child = await dp.CreateChildAsync("abc", 123);
       Assert.AreEqual("2", child.Name);
     }
 
     [TestMethod]
     public async Task FetchChildNoCriteria()
     {
-      var child = await Csla.DataPortal.FetchChildAsync<TestChild>();
+      var dp = _testDIContext.CreateChildDataPortal<TestChild>();
+      var child = await dp.FetchChildAsync();
       Assert.AreEqual("none", child.Name);
     }
 
     [TestMethod]
     public async Task FetchChildInt32Criteria()
     {
-      var dp = new Server.ChildDataPortal();
-      var child = await dp.FetchAsync<TestChild>(123);
+      var dp = _testDIContext.CreateChildDataPortal<TestChild>();
+      var child = await dp.FetchChildAsync(123);
       Assert.AreEqual("Int32", child.Name);
     }
 
     [TestMethod]
     public async Task FetchChildMultipleCriteria()
     {
-      var dp = new Server.ChildDataPortal();
-      var child = await dp.FetchAsync<TestChild>("abc", 123);
+      var dp = _testDIContext.CreateChildDataPortal<TestChild>();
+      var child = await dp.FetchChildAsync("abc", 123);
       Assert.AreEqual("2", child.Name);
     }
 
     [TestMethod]
     public async Task UpdateChild()
     {
-      var dp = new Server.ChildDataPortal();
-      var child = await dp.FetchAsync<TestChild>();
-      await dp.UpdateAsync(child, "update", 123);
+      var dp = _testDIContext.CreateChildDataPortal<TestChild>();
+      var child = await dp.FetchChildAsync();
+      await dp.UpdateChildAsync(child, "update", 123);
       Assert.AreEqual("update/123", child.Name);
+    }
+
+    [TestMethod]
+    public async Task DeleteSelfChild()
+    {
+      var dp = _testDIContext.CreateChildDataPortal<TestChild>();
+      var child = await dp.FetchChildAsync();
+      child.MarkForDeletion();
+      await dp.UpdateChildAsync(child, "deleteme", 123);
+      Assert.AreEqual("deleteme", child.Name);
+    }
+
+    [TestMethod]
+    public async Task DeleteSelfChildNoParamFallback()
+    {
+      var dp = _testDIContext.CreateChildDataPortal<TestChildDeleteFallback>();
+      var child = await dp.FetchChildAsync();
+      child.MarkForDeletion();
+      await dp.UpdateChildAsync(child, "update", 123);
+      Assert.AreEqual("deleted", child.Name);
     }
   }
 
@@ -91,6 +122,11 @@ namespace Csla.Test.DataPortal
     {
       get { return GetProperty(NameProperty); }
       set { SetProperty(NameProperty, value); }
+    }
+
+    public void MarkForDeletion()
+    {
+      MarkDeleted();
     }
 
     [CreateChild]
@@ -172,10 +208,40 @@ namespace Csla.Test.DataPortal
     }
 
     [DeleteSelfChild]
-    private async Task DeleteChild(params object[] parameters)
+    private async Task DeleteChild(string s, int i)
     {
       await Task.Delay(0);
-      Name = parameters[0].ToString();
+      Name = s;
+    }
+  }
+
+  [Serializable]
+  public class TestChildDeleteFallback : BusinessBase<TestChildDeleteFallback>
+  {
+    public static readonly PropertyInfo<string> NameProperty = RegisterProperty<string>(nameof(Name));
+    public string Name
+    {
+      get { return GetProperty(NameProperty); }
+      set { SetProperty(NameProperty, value); }
+    }
+
+    public void MarkForDeletion()
+    {
+      MarkDeleted();
+    }
+
+    [FetchChild]
+    private async Task FetchChild()
+    {
+      await Task.Delay(0);
+      Name = "none";
+      return;
+    }
+
+    [DeleteSelfChild]
+    private void DeleteSelf()
+    {
+      Name = "deleted";
     }
   }
 }

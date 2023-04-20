@@ -36,9 +36,8 @@ namespace Csla.Test.Basic
       return obj;
     }
 
-    private GrandChild()
+    public GrandChild()
     {
-      //prevent direct creation
       MarkAsChild();
     }
 
@@ -71,7 +70,7 @@ namespace Csla.Test.Basic
     protected override void OnDeserialized(System.Runtime.Serialization.StreamingContext context)
     {
       base.OnDeserialized(context);
-      Csla.ApplicationContext.GlobalContext.Add("GCDeserialized", "GC Deserialized");
+      TestResults.Add("GCDeserialized", "GC Deserialized");
     }
   }
 }

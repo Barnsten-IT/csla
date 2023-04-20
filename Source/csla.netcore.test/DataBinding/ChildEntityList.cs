@@ -15,20 +15,10 @@ namespace Csla.Test.DataBinding
   [Serializable()]
   public class ChildEntityList : BusinessBindingListBase<ChildEntityList, ChildEntity>
   {
-    private ChildEntityList()
+    public ChildEntityList()
     {
-      //require factory method
       this.MarkAsChild();
     }
-
-    #region "factory methods"
-
-    public static ChildEntityList NewChildEntityList()
-    {
-      return new ChildEntityList();
-    }
-
-    #endregion
 
     #region "Criteria"
 
@@ -48,13 +38,8 @@ namespace Csla.Test.DataBinding
       }
     }
 
-    public static ChildEntityList GetList()
-    {
-      return Csla.DataPortal.Fetch<ChildEntityList>(new Criteria());
-    }
-
     [Fetch]
-    protected override void DataPortal_Fetch(object criteria)
+    private void DataPortal_Fetch(object criteria)
     {
       for (int i = 0; i < 10; i++)
         Add(new ChildEntity(i, "first" + i, "last" + i));

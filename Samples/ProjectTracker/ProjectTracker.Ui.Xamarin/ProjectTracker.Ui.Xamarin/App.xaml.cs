@@ -1,50 +1,46 @@
-﻿using ProjectTracker.Library;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System;
 using System.Threading.Tasks;
+using Csla.Configuration;
+using ProjectTracker.Library;
 using Xamarin.Forms;
 
 namespace ProjectTracker.Ui.Xamarin
 {
-	public partial class App : Application
-	{
+  public partial class App : Application
+  {
     public static Page RootPage { get; private set; }
-    private XamarinFormsUi.Dashboard startPage = new XamarinFormsUi.Dashboard();
 
-    public App ()
-		{
-			InitializeComponent();
+    public App()
+    {
+      InitializeComponent();
+      Csla.DataPortalClient.HttpProxy.UseTextSerialization = true;
+      CslaConfiguration.Configure()
+        .DataPortal()
+          .DefaultProxy(typeof(Csla.DataPortalClient.HttpProxy),
+                        "https://ptrackerserver.azurewebsites.net/api/dataportaltext");
 
-      //MainPage = new ProjectTracker.Ui.Xamarin.MainPage();
-      MainPage = new NavigationPage(startPage);
+      Library.Security.PTPrincipal.Logout();
+
+      MainPage = new NavigationPage(new XamarinFormsUi.Views.Dashboard());
       RootPage = MainPage;
     }
 
-    protected override async void OnStart ()
-		{
-      // Handle when your app starts
-      Csla.ApplicationContext.DataPortalProxy = typeof(Csla.DataPortalClient.HttpProxy).AssemblyQualifiedName;
-      Csla.ApplicationContext.DataPortalUrlString = "http://ptrackerserver.azurewebsites.net/api/DataPortal/PostAsync";
-
-      Library.Security.PTPrincipal.Logout();
-      await ProjectTracker.Library.Security.PTPrincipal.LoginAsync("manager", "manager");
+    protected override async void OnStart()
+    {
+      await Library.Security.PTPrincipal.LoginAsync("manager", "manager");
 
       await RoleList.CacheListAsync();
-
-      await startPage.InitAsync();
     }
 
-    protected override void OnSleep ()
-		{
-			// Handle when your app sleeps
-		}
+    protected override void OnSleep()
+    {
+      // Handle when your app sleeps
+    }
 
-		protected override void OnResume ()
-		{
-			// Handle when your app resumes
-		}
+    protected override void OnResume()
+    {
+      // Handle when your app resumes
+    }
 
     public static async Task NavigateTo(Type page)
     {
@@ -60,7 +56,6 @@ namespace ProjectTracker.Ui.Xamarin
 
     private static async Task NavigateTo(Page page)
     {
-      await Csla.Reflection.MethodCaller.CallMethodTryAsync(page, "InitAsync");
       await RootPage.Navigation.PushAsync(page);
     }
   }

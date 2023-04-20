@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using UnitDriven;
+using Csla.TestHelpers;
 
 #if NUNIT
 using NUnit.Framework;
@@ -25,10 +26,26 @@ namespace Csla.Test.ValidationRules
   [TestClass()]
   public class ShortCircuitTests
   {
+    private static TestDIContext _testDIContext;
+
+    [ClassInitialize]
+    public static void ClassInitialize(TestContext testContext)
+    {
+      _testDIContext = TestDIContextFactory.CreateDefaultContext();
+    }
+
+    [TestInitialize]
+    public void Initialize()
+    {
+      TestResults.Reinitialise();
+    }
+
     [TestMethod]
     public void ShortCircuitOnNew()
     {
-      ShortCircuit root = new ShortCircuit();
+      IDataPortal<ShortCircuit> dataPortal = _testDIContext.CreateDataPortal<ShortCircuit>();
+
+      ShortCircuit root = dataPortal.Create();
       root.CheckRules();
       Assert.AreEqual(1, root.BrokenRulesCollection.ErrorCount, "Only one rule should be broken");
       Assert.AreEqual("Test required", root.BrokenRulesCollection.GetFirstBrokenRule("Test").Description, "'Test required' should be broken");
@@ -37,7 +54,9 @@ namespace Csla.Test.ValidationRules
     [TestMethod]
     public void ShortCircuitOnPropertySet()
     {
-      ShortCircuit root = new ShortCircuit();
+      IDataPortal<ShortCircuit> dataPortal = _testDIContext.CreateDataPortal<ShortCircuit>();
+
+      ShortCircuit root = dataPortal.Create();
       root.CheckRules();
       root.Test = "some data";
       Assert.AreEqual(1, root.BrokenRulesCollection.ErrorCount, "Only one rule should be broken with data");
@@ -50,7 +69,9 @@ namespace Csla.Test.ValidationRules
     [TestMethod]
     public void HigherThreshold()
     {
-      ShortCircuit root = new ShortCircuit();
+      IDataPortal<ShortCircuit> dataPortal = _testDIContext.CreateDataPortal<ShortCircuit>();
+
+      ShortCircuit root = dataPortal.Create();
       root.CheckRules();
       Assert.AreEqual(1, root.BrokenRulesCollection.ErrorCount, "Only one rule should be broken");
       Assert.AreEqual("Test required", root.BrokenRulesCollection.GetFirstBrokenRule("Test").Description, "'Test required' should be broken");

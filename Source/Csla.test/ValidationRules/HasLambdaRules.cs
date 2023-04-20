@@ -25,13 +25,14 @@ namespace Csla.Test.ValidationRules
       set { SetProperty(Ssn2Property, value); }
     }
 
-    public static HasLambdaRules New()
+    public static HasLambdaRules New(IDataPortal<HasLambdaRules> dataPortal)
     {
-      return Csla.DataPortal.Create<HasLambdaRules>();
+      return dataPortal.Create();
     }
 
     [RunLocal]
-    protected override void DataPortal_Create()
+    [Create]
+		protected void DataPortal_Create()
     {
       LoadProperty(SsnProperty, string.Empty);
       LoadProperty(Ssn2Property, string.Empty);

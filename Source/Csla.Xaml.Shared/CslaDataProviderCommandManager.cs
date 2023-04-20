@@ -1,4 +1,4 @@
-﻿#if !NETFX_CORE && !PCL36 && !XAMARIN
+﻿#if !XAMARIN && !WINDOWS_UWP && !MAUI
 //-----------------------------------------------------------------------
 // <copyright file="CslaDataProviderCommandManager.cs" company="Marimer LLC">
 //     Copyright (c) Marimer LLC. All rights reserved.
@@ -119,7 +119,7 @@ namespace Csla.Xaml
           if (list != null)
           {
             result = list.AllowNew;
-            if (result && !Csla.Rules.BusinessRules.HasPermission(Rules.AuthorizationActions.EditObject, ctl.Provider.Data))
+            if (result && !Csla.Rules.BusinessRules.HasPermission(ApplicationContextManager.GetApplicationContext(), Rules.AuthorizationActions.EditObject, ctl.Provider.Data))
               result = false;
           }
         }
@@ -151,7 +151,7 @@ namespace Csla.Xaml
           if (list != null)
           {
             result = list.AllowRemove;
-            if (result && !Csla.Rules.BusinessRules.HasPermission(Rules.AuthorizationActions.EditObject, ctl.Provider.Data))
+            if (result && !Csla.Rules.BusinessRules.HasPermission(ApplicationContextManager.GetApplicationContext(), Rules.AuthorizationActions.EditObject, ctl.Provider.Data))
               result = false;
           }
         }

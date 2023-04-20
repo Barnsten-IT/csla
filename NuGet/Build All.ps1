@@ -41,7 +41,7 @@ try
     $originalBackground = $host.UI.RawUI.BackgroundColor
     $originalForeground = $host.UI.RawUI.ForegroundColor
     $originalLocation = Get-Location
-    $packages = @("Core", "Csla.Blazor", "Csla.Channels.Grpc", "Csla.Channels.RabbitMq", "XamarinForms", "AspNetCore MVC", "ASP.NET", "ASP.NET MVC 5", "ASP.NET MVC 4", "Windows Forms", "UWP", "WPF", "MonoAndroid", "XamarinIos", "Data EF4", "Data EF5", "Data EF6", "Data SqlClient", "Data SqlClientFx", "Templates", "UpdateValidation", "Data EntityFrameworkCore")  
+    $packages = @("Csla", "Csla.Maui", "Csla.Blazor", "Csla.Blazor.WebAssembly", "Csla.Channels.Grpc", "Csla.Channels.RabbitMq", "Csla.Data.SqlClient", "Csla.Data.SqlClientFx", "Csla.Uwp", "Csla.AspNetCore", "Csla.Web.Mvc", "Csla.Web", "Csla.Windows.Forms", "Csla.Wpf", "Csla.Xamarin", "Csla.Templates")  
     
     $host.UI.RawUI.BackgroundColor = [System.ConsoleColor]::Black
     $host.UI.RawUI.ForegroundColor = [System.ConsoleColor]::White
@@ -56,6 +56,7 @@ try
     ## ---------------------------------------
     Write-Host "Clean destination folders..." -ForegroundColor Yellow
     Remove-Item ".\Packages\*.nupkg" -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item ".\Packages\*.snupkg" -Recurse -Force -ErrorAction SilentlyContinue
     
     ## RDL - Copy definition files to temp folder
     ## ------------------------------------------

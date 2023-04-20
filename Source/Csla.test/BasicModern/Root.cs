@@ -39,58 +39,38 @@ namespace Csla.Test.BasicModern
       MarkOld();
     }
 
-    public static async Task<Root> NewRootAsync()
+    [Create]
+	protected void DataPortal_Create([Inject] IChildDataPortal<ChildList> childDataPortal)
     {
-      return await Csla.DataPortal.CreateAsync<Root>();
-    }
-
-    public static async Task<Root> GetRootAsync(int id)
-    {
-      return await Csla.DataPortal.FetchAsync<Root>(id);
-    }
-
-    public static Root NewRoot()
-    {
-      return Csla.DataPortal.Create<Root>();
-    }
-
-    public static Root GetRoot(int id)
-    {
-      return Csla.DataPortal.Fetch<Root>(id);
-    }
-
-    public static void DeleteRoot(int id)
-    {
-      Csla.DataPortal.Delete<Root>(id);
-    }
-
-    protected override void DataPortal_Create()
-    {
-      Children = Csla.DataPortal.CreateChild<ChildList>();
-      base.DataPortal_Create();
+      Children = childDataPortal.CreateChild();
+      BusinessRules.CheckRules();
     }
     
-    private void DataPortal_Fetch(int id)
+    private void DataPortal_Fetch(int id, [Inject] IChildDataPortal<ChildList> childDataPortal)
     {
-      Children = Csla.DataPortal.CreateChild<ChildList>();
+      Children = childDataPortal.CreateChild();
     }
 
-    protected override void DataPortal_Insert()
-    {
-      FieldManager.UpdateChildren();
-    }
-
-    protected override void DataPortal_Update()
+    [Insert]
+    protected void DataPortal_Insert()
     {
       FieldManager.UpdateChildren();
     }
 
-    protected override void DataPortal_DeleteSelf()
+    [Update]
+	protected void DataPortal_Update()
+    {
+      FieldManager.UpdateChildren();
+    }
+
+    [DeleteSelf]
+    protected void DataPortal_DeleteSelf()
     {
       DataPortal_Delete(ReadProperty(IdProperty));
     }
 
-    private void DataPortal_Delete(int id)
+    [Delete]
+	private void DataPortal_Delete(int id)
     {
       FieldManager.UpdateChildren();
     }

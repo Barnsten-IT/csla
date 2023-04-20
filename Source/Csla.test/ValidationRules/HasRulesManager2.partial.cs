@@ -14,17 +14,19 @@ namespace Csla.Test.ValidationRules
 {
   public partial class HasRulesManager2
   {
-    private HasRulesManager2()
+    [Create]
+    private void DataPortal_Create()
     {
-      //prevent direct creation
+      BusinessRules.CheckRules();
     }
 
+    [Create]
     private void DataPortal_Create(object criteria)
     {
       Criteria crit = (Criteria)(criteria);
       using (BypassPropertyChecks)
         Name = crit._name;
-      Csla.ApplicationContext.GlobalContext.Add("HasRulesManager2", "Created");
+      TestResults.Add("HasRulesManager2", "Created");
       BusinessRules.CheckRules();
     }
 
@@ -34,15 +36,16 @@ namespace Csla.Test.ValidationRules
       using (BypassPropertyChecks)
         Name = crit._name;
       MarkOld();
-      Csla.ApplicationContext.GlobalContext.Add("HasRulesManager2", "Fetched");
+      TestResults.Add("HasRulesManager2", "Fetched");
     }
 
-    protected override void DataPortal_Update()
+    [Update]
+		protected void DataPortal_Update()
     {
       if (IsDeleted)
       {
         //we would delete here
-        Csla.ApplicationContext.GlobalContext.Add("HasRulesManager2", "Deleted");
+        TestResults.Add("HasRulesManager2", "Deleted");
         MarkNew();
       }
       else
@@ -50,21 +53,22 @@ namespace Csla.Test.ValidationRules
         if (this.IsNew)
         {
           //we would insert here
-          Csla.ApplicationContext.GlobalContext.Add("HasRulesManager2", "Inserted");
+          TestResults.Add("HasRulesManager2", "Inserted");
         }
         else
         {
           //we would update here
-          Csla.ApplicationContext.GlobalContext.Add("HasRulesManager2", "Updated");
+          TestResults.Add("HasRulesManager2", "Updated");
         }
         MarkOld();
       }
     }
 
-    protected void DataPortal_Delete(object criteria)
+    [Delete]
+		protected void DataPortal_Delete(object criteria)
     {
       //we would delete here
-      Csla.ApplicationContext.GlobalContext.Add("HasRulesManager2", "Deleted");
+      TestResults.Add("HasRulesManager2", "Deleted");
     }
 
 

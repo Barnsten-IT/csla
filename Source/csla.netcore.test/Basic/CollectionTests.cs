@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Linq;
 using System.Diagnostics;
+using Csla.TestHelpers;
 
 #if !NUNIT
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -26,15 +27,23 @@ namespace Csla.Test.Basic
   [TestClass]
   public class CollectionTests
   {
+    private static TestDIContext _testDIContext;
+
+    [ClassInitialize]
+    public static void ClassInitialize(TestContext context)
+    {
+      _testDIContext = TestDIContextFactory.CreateDefaultContext();
+    }
+
     [TestMethod]
     public void SetLast()
     {
-      TestCollection list = new TestCollection();
-      list.Add(new TestItem());
-      list.Add(new TestItem());
-      TestItem oldItem = new TestItem();
+      TestCollection list = CreateTestCollection();
+      list.AddNew();
+      list.AddNew();
+      TestItem oldItem = CreateTestItem();
       list.Add(oldItem);
-      TestItem newItem = new TestItem();
+      TestItem newItem = CreateTestItem();
       list[2] = newItem;
       Assert.AreEqual(3, list.Count, "List should have 3 items");
       Assert.AreEqual(newItem, list[2], "Last item should be newItem");
@@ -44,10 +53,29 @@ namespace Csla.Test.Basic
     [TestMethod]
     public void RootListGetRuleDescriptions()
     {
-      RootList list = new RootList();
+      RootList list = CreateRootList();
       RootListChild child = list.AddNew();
       string[] rules = child.GetRuleDescriptions();
     }
+
+    private TestCollection CreateTestCollection()
+    {
+      IDataPortal<TestCollection> dataPortal = _testDIContext.CreateDataPortal<TestCollection>();
+      return dataPortal.Create();
+    }
+
+    private TestItem CreateTestItem()
+    {
+      IDataPortal<TestItem> dataPortal = _testDIContext.CreateDataPortal<TestItem>();
+      return dataPortal.Create();
+    }
+
+    private RootList CreateRootList()
+    {
+      IDataPortal<RootList> dataPortal = _testDIContext.CreateDataPortal<RootList>();
+      return dataPortal.Create();
+    }
+
   }
 
   [Serializable]
@@ -58,26 +86,19 @@ namespace Csla.Test.Basic
       AllowNew = true;
     }
 
-    protected override object AddNewCore()
+    [Create]
+    private void Create()
     {
-      var item = Csla.DataPortal.CreateChild<TestItem>();
-      Add(item);
-      return item;
-    }
-
-    public static TestCollection GetList()
-    {
-      return Csla.DataPortal.Fetch<TestCollection>();
     }
 
     [Fetch]
-    private void DataPortal_Fetch()
+    private void Fetch([Inject] IChildDataPortal<TestItem> dataPortal)
     {
-      Add(Csla.DataPortal.FetchChild<TestItem>(123));
-      Add(Csla.DataPortal.FetchChild<TestItem>(2));
-      Add(Csla.DataPortal.FetchChild<TestItem>(13));
-      Add(Csla.DataPortal.FetchChild<TestItem>(23));
-      Add(Csla.DataPortal.FetchChild<TestItem>(3));
+      Add(dataPortal.FetchChild(123));
+      Add(dataPortal.FetchChild(2));
+      Add(dataPortal.FetchChild(13));
+      Add(dataPortal.FetchChild(23));
+      Add(dataPortal.FetchChild(3));
     }
   }
 
@@ -101,9 +122,10 @@ namespace Csla.Test.Basic
       MarkAsChild();
     }
 
-    [CreateChild]
-    protected override void Child_Create()
-    { }
+    [Create]
+    private void Create()
+    {
+    }
 
     [FetchChild]
     private void Child_Fetch(int id)

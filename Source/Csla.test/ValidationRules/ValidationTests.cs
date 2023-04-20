@@ -15,6 +15,7 @@ using Csla.Rules;
 using UnitDriven;
 using Csla.Serialization;
 using System.Threading.Tasks;
+using Csla.TestHelpers;
 
 #if NUNIT
 using NUnit.Framework;
@@ -32,13 +33,26 @@ namespace Csla.Test.ValidationRules
   public class ValidationTests : TestBase
   {
 
+    private static TestDIContext _testDIContext;
+
+    [ClassInitialize]
+    public static void ClassInitialize(TestContext context)
+    {
+      _testDIContext = TestDIContextFactory.CreateDefaultContext();
+    }
+
+    [TestInitialize]
+    public void Initialize()
+    {
+      TestResults.Reinitialise();
+    }
+
     [TestMethod()]
     public async Task TestValidationRulesWithPrivateMember()
     {
       //works now because we are calling ValidationRules.CheckRules() in DataPortal_Create
       UnitTestContext context = GetContext();
-      Csla.ApplicationContext.GlobalContext.Clear();
-      var root = await Csla.DataPortal.CreateAsync<HasRulesManager>(new HasRulesManager.Criteria());
+      var root = await CreateHasRulesManagerAsync();
       context.Assert.AreEqual("<new>", root.Name);
       context.Assert.AreEqual(true, root.IsValid, "should be valid on create");
       context.Assert.AreEqual(0, root.BrokenRulesCollection.Count);
@@ -68,8 +82,7 @@ namespace Csla.Test.ValidationRules
     public async Task TestValidationRulesWithPublicProperty()
     {
       //should work since ValidationRules.CheckRules() is called in DataPortal_Create
-      Csla.ApplicationContext.GlobalContext.Clear();
-      var root = await Csla.DataPortal.CreateAsync<HasRulesManager2>(new HasRulesManager2.Criteria("<new>"));
+      var root = await CreateHasRulesManager2Async("<new>");
       Assert.AreEqual("<new>", root.Name);
       Assert.AreEqual(true, root.IsValid, "should be valid on create");
       Assert.AreEqual(0, root.BrokenRulesCollection.Count);
@@ -98,9 +111,8 @@ namespace Csla.Test.ValidationRules
     public async Task TestValidationAfterEditCycle()
     {
       //should work since ValidationRules.CheckRules() is called in DataPortal_Create
-      Csla.ApplicationContext.GlobalContext.Clear();
       UnitTestContext context = GetContext();
-      var root = await Csla.DataPortal.CreateAsync<HasRulesManager>(new HasRulesManager.Criteria());
+      var root = await CreateHasRulesManagerAsync();
       context.Assert.AreEqual("<new>", root.Name);
       context.Assert.AreEqual(true, root.IsValid, "should be valid on create");
       context.Assert.AreEqual(0, root.BrokenRulesCollection.Count);
@@ -179,8 +191,7 @@ namespace Csla.Test.ValidationRules
       //this test uses HasRulesManager2, which assigns criteria._name to its public
       //property in DataPortal_Create.  If it used HasRulesManager, it would fail
       //the first assert, but pass the others
-      Csla.ApplicationContext.GlobalContext.Clear();
-      var root = await Csla.DataPortal.CreateAsync<HasRulesManager2>(new HasRulesManager2.Criteria("test"));
+      var root = await CreateHasRulesManager2Async("test");
       Assert.AreEqual(true, root.IsValid);
       root.BeginEdit();
       root.Name = "";
@@ -198,8 +209,7 @@ namespace Csla.Test.ValidationRules
 
     public async Task BreakRequiredRule()
     {
-      Csla.ApplicationContext.GlobalContext.Clear();
-      var root = await Csla.DataPortal.CreateAsync<HasRulesManager>(new HasRulesManager.Criteria());
+      var root = await CreateHasRulesManagerAsync();
       root.Name = "";
       Assert.AreEqual(false, root.IsValid, "should not be valid");
       Assert.AreEqual(1, root.BrokenRulesCollection.Count);
@@ -210,9 +220,8 @@ namespace Csla.Test.ValidationRules
 
     public async Task BreakLengthRule()
     {
-      Csla.ApplicationContext.GlobalContext.Clear();
       UnitTestContext context = GetContext();
-      var root = await Csla.DataPortal.CreateAsync<HasRulesManager>(new HasRulesManager.Criteria());
+      var root = await CreateHasRulesManagerAsync();
       root.Name = "12345678901";
       context.Assert.AreEqual(false, root.IsValid, "should not be valid");
       context.Assert.AreEqual(1, root.BrokenRulesCollection.Count);
@@ -230,9 +239,8 @@ namespace Csla.Test.ValidationRules
 
     public async Task BreakLengthRuleAndClone()
     {
-      Csla.ApplicationContext.GlobalContext.Clear();
       UnitTestContext context = GetContext();
-      var root = await Csla.DataPortal.CreateAsync<HasRulesManager>(new HasRulesManager.Criteria());
+      var root = await CreateHasRulesManagerAsync();
       root.Name = "12345678901";
       context.Assert.AreEqual(false, root.IsValid, "should not be valid before clone");
       context.Assert.AreEqual(1, root.BrokenRulesCollection.Count);
@@ -255,10 +263,9 @@ namespace Csla.Test.ValidationRules
     [TestMethod()]
     public void RegExSSN()
     {
-      Csla.ApplicationContext.GlobalContext.Clear();
       UnitTestContext context = GetContext();
 
-      HasRegEx root = new HasRegEx();
+      HasRegEx root = CreateWithoutCriteria<HasRegEx>();
 
       root.Ssn = "555-55-5555";
       root.Ssn2 = "555-55-5555";
@@ -279,7 +286,7 @@ namespace Csla.Test.ValidationRules
     public void MergeBrokenRules()
     {
       UnitTestContext context = GetContext();
-      var root = new BrokenRulesMergeRoot();
+      var root = CreateWithoutCriteria<BrokenRulesMergeRoot>();
       root.Validate();
       Csla.Rules.BrokenRulesCollection list = root.BrokenRulesCollection;
       context.Assert.AreEqual(2, list.Count, "Should have 2 broken rules");
@@ -292,10 +299,9 @@ namespace Csla.Test.ValidationRules
     [TestMethod]
     public async Task VerifyUndoableStateStackOnClone()
     {
-      Csla.ApplicationContext.GlobalContext.Clear();
       using (UnitTestContext context = GetContext())
       {
-        var root = await Csla.DataPortal.CreateAsync<HasRulesManager2>();
+        var root = await CreateHasRulesManager2Async();
         string expected = root.Name;
         root.BeginEdit();
         root.Name = "";
@@ -314,12 +320,11 @@ namespace Csla.Test.ValidationRules
     [TestMethod()]
     public async Task ListChangedEventTrigger()
     {
-      Csla.ApplicationContext.GlobalContext.Clear();
       UnitTestContext context = GetContext();
-      var root = await Csla.DataPortal.CreateAsync<HasChildren>();
+      var root = await CreateWithoutCriteriaAsync<HasChildren>();
       context.Assert.AreEqual(false, root.IsValid);
       root.BeginEdit();
-      root.ChildList.Add(Csla.DataPortal.CreateChild<Child>());
+      root.ChildList.Add(CreateChildWithoutCriteria<Child>());
       context.Assert.AreEqual(true, root.IsValid);
 
       root.CancelEdit();
@@ -333,7 +338,7 @@ namespace Csla.Test.ValidationRules
     public void RuleThrowsException()
     {
       UnitTestContext context = GetContext();
-      var root = new HasBadRule();
+      var root = CreateWithoutCriteria<HasBadRule>();
       root.Validate();
       context.Assert.IsFalse(root.IsValid);
       context.Assert.AreEqual(1, root.GetBrokenRules().Count);
@@ -350,7 +355,7 @@ namespace Csla.Test.ValidationRules
     public void PrivateField()
     {
       UnitTestContext context = GetContext();
-      var root = new HasPrivateFields();
+      var root = CreateWithoutCriteria<HasPrivateFields>();
       root.Validate();
       context.Assert.IsFalse(root.IsValid);
       root.Name = "abc";
@@ -363,7 +368,7 @@ namespace Csla.Test.ValidationRules
     public void MinMaxValue()
     {
       var context = GetContext();
-      var root = Csla.DataPortal.Create<UsesCommonRules>();
+      var root = CreateWithoutCriteria<UsesCommonRules>();
       context.Assert.AreEqual(1, root.Data);
 
       context.Assert.IsFalse(root.IsValid);
@@ -387,7 +392,7 @@ namespace Csla.Test.ValidationRules
     public void MinMaxNullableValue()
     {
       var context = GetContext();
-      var root = Csla.DataPortal.Create<MinMaxNullableRules>();
+      var root = CreateWithoutCriteria<MinMaxNullableRules>();
       context.Assert.IsNull(root.DataNullable);
 
       context.Assert.IsFalse(root.IsValid);
@@ -412,7 +417,7 @@ namespace Csla.Test.ValidationRules
     {
       var context = GetContext();
 
-      var root = Csla.DataPortal.Create<UsesCommonRules>();
+      var root = CreateWithoutCriteria<UsesCommonRules>();
       root.Data = 15;
       context.Assert.IsTrue(root.IsValid, "Should start valid");
 
@@ -440,7 +445,8 @@ namespace Csla.Test.ValidationRules
       var root = new TwoPropertyRules();
       var rule = new TwoProps(TwoPropertyRules.Value1Property, TwoPropertyRules.Value2Property);
 
-      var ctx = new Csla.Rules.RuleContext(null, rule, root,
+      var applicationContext = _testDIContext.CreateTestApplicationContext();
+      var ctx = new Csla.Rules.RuleContext(applicationContext, null, rule, root,
         new Dictionary<Core.IPropertyInfo, object> { 
           { TwoPropertyRules.Value1Property, "a" },
           { TwoPropertyRules.Value2Property, "b" } 
@@ -448,7 +454,7 @@ namespace Csla.Test.ValidationRules
       ((Csla.Rules.IBusinessRule)rule).Execute(ctx);
       context.Assert.AreEqual(0, ctx.Results.Count);
 
-      ctx = new Csla.Rules.RuleContext(null, rule, root,
+      ctx = new Csla.Rules.RuleContext(applicationContext, null, rule, root,
         new Dictionary<Core.IPropertyInfo, object> { 
           { TwoPropertyRules.Value1Property, "" },
           { TwoPropertyRules.Value2Property, "a" } 
@@ -492,9 +498,11 @@ namespace Csla.Test.ValidationRules
     [TestMethod]
     public void ObjectDirtyWhenOutputValueChangesPropertyValue()
     {
+      IDataPortal<DirtyAfterOutValueChangesProperty> dataPortal = _testDIContext.CreateDataPortal<DirtyAfterOutValueChangesProperty>();
+
       var context = GetContext();
 
-      var root = new DirtyAfterOutValueChangesProperty();
+      var root = dataPortal.Fetch();
       context.Assert.IsFalse(root.IsDirty);
       context.Assert.AreEqual("csla rocks", root.Value1);
       root.CheckRules();
@@ -507,9 +515,11 @@ namespace Csla.Test.ValidationRules
     [TestMethod]
     public void ObjectNotDirtyWhenOutputValueDoNotChangePropertyValue()
     {
+      IDataPortal<DirtyAfterOutValueChangesProperty> dataPortal = _testDIContext.CreateDataPortal<DirtyAfterOutValueChangesProperty>();
+
       var context = GetContext();
 
-      var root = new DirtyAfterOutValueChangesProperty("CSLA ROCKS");
+      var root = dataPortal.Fetch("CSLA ROCKS");
       context.Assert.IsFalse(root.IsDirty);
       context.Assert.AreEqual("CSLA ROCKS", root.Value1);
       root.CheckRules();
@@ -518,6 +528,49 @@ namespace Csla.Test.ValidationRules
       context.Assert.Success();
       context.Complete();
     }
+
+    private T CreateWithoutCriteria<T>()
+    {
+      IDataPortal<T> dataPortal = _testDIContext.CreateDataPortal<T>();
+
+      return dataPortal.Create();
+    }
+
+    private async Task<T> CreateWithoutCriteriaAsync<T>()
+    {
+      IDataPortal<T> dataPortal = _testDIContext.CreateDataPortal<T>();
+
+      return await dataPortal.CreateAsync();
+    }
+
+    private T CreateChildWithoutCriteria<T>()
+    {
+      IChildDataPortal<T> dataPortal = _testDIContext.CreateChildDataPortal<T>();
+
+      return dataPortal.CreateChild();
+    }
+
+    private async Task<HasRulesManager> CreateHasRulesManagerAsync()
+    {
+      IDataPortal<HasRulesManager> dataPortal = _testDIContext.CreateDataPortal<HasRulesManager>();
+
+      return await dataPortal.CreateAsync(new HasRulesManager.Criteria());
+    }
+
+    private async Task<HasRulesManager2> CreateHasRulesManager2Async()
+    {
+      IDataPortal<HasRulesManager2> dataPortal = _testDIContext.CreateDataPortal<HasRulesManager2>();
+
+      return await dataPortal.CreateAsync();
+    }
+
+    private async Task<HasRulesManager2> CreateHasRulesManager2Async(string ident)
+    {
+      IDataPortal<HasRulesManager2> dataPortal = _testDIContext.CreateDataPortal<HasRulesManager2>();
+
+      return await dataPortal.CreateAsync(new HasRulesManager2.Criteria(ident));
+    }
+
   }
 
   [Serializable]
@@ -553,6 +606,11 @@ namespace Csla.Test.ValidationRules
         throw new InvalidOperationException();
       }
     }
+
+    [Create]
+    private void Create()
+    {
+    }
   }
 
   [Serializable]
@@ -583,6 +641,11 @@ namespace Csla.Test.ValidationRules
     {
       base.AddBusinessRules();
       BusinessRules.AddRule(new Csla.Rules.CommonRules.Required(NameProperty));
+    }
+
+    [Create]
+    private void Create()
+    {
     }
   }
 
@@ -619,6 +682,12 @@ namespace Csla.Test.ValidationRules
       BusinessRules.AddRule(new Csla.Rules.CommonRules.MinLength(MinCheckProperty, 5));
       BusinessRules.AddRule(new Csla.Rules.CommonRules.MaxLength(MaxCheckProperty, 5));
     }
+
+    [Create]
+    private void Create()
+    {
+      BusinessRules.CheckRules();
+    }
   }
 
   [Serializable]
@@ -637,6 +706,12 @@ namespace Csla.Test.ValidationRules
 
       BusinessRules.AddRule(new Csla.Rules.CommonRules.MinValue<int>(DataNullableProperty, 5));
       BusinessRules.AddRule(new Csla.Rules.CommonRules.MaxValue<int>(DataNullableProperty, 15));
+    }
+
+    [Create]
+    private void Create()
+    {
+      BusinessRules.CheckRules();
     }
   }
 
@@ -723,18 +798,8 @@ namespace Csla.Test.ValidationRules
       set { SetProperty(Value1Property, value); }
     }
 
-    public DirtyAfterOutValueChangesProperty() : this("csla rocks")
+    public DirtyAfterOutValueChangesProperty() 
     { }
-
-    public DirtyAfterOutValueChangesProperty(string value)
-    {
-      using (BypassPropertyChecks)
-      {
-        Value1 = value;
-      }
-      MarkOld();
-      MarkClean();
-    }
 
     protected override void AddBusinessRules()
     {
@@ -757,10 +822,24 @@ namespace Csla.Test.ValidationRules
       }
     }
 
-
     public void CheckRules()
     {
       BusinessRules.CheckRules();
+    }
+
+    [Fetch]
+    private void Fetch()
+    {
+      Fetch("csla rocks");
+    }
+
+    [Fetch]
+    private void Fetch(string value)
+    {
+      using (BypassPropertyChecks)
+      {
+        Value1 = value;
+      }
     }
   }
 
@@ -792,6 +871,14 @@ namespace Csla.Test.ValidationRules
   [TestClass]
   public class RuleContextTests
   {
+    private static TestDIContext _testDIContext;
+
+    [ClassInitialize]
+    public static void ClassInitialize(TestContext context)
+    {
+      _testDIContext = TestDIContextFactory.CreateDefaultContext();
+    }
+
     [TestMethod]
     [ExpectedException(typeof(ArgumentException))]
     public void AddErrorResultThrowsErrorWhenMessageIsEmpty()
@@ -799,7 +886,8 @@ namespace Csla.Test.ValidationRules
       var root = new TwoPropertyRules();
       var rule = new TwoProps(TwoPropertyRules.Value1Property, TwoPropertyRules.Value2Property);
 
-      var ctx = new Csla.Rules.RuleContext(null, rule, root,
+      var applicationContext = _testDIContext.CreateTestApplicationContext();
+      var ctx = new Csla.Rules.RuleContext(applicationContext, null, rule, root,
                                            new Dictionary<Core.IPropertyInfo, object>
                                                {
                                                  {TwoPropertyRules.Value1Property, "a"},
@@ -816,7 +904,8 @@ namespace Csla.Test.ValidationRules
       var root = new TwoPropertyRules();
       var rule = new TwoProps(TwoPropertyRules.Value1Property, TwoPropertyRules.Value2Property);
 
-      var ctx = new Csla.Rules.RuleContext(null, rule, root,
+      var applicationContext = _testDIContext.CreateTestApplicationContext();
+      var ctx = new Csla.Rules.RuleContext(applicationContext, null, rule, root,
                                            new Dictionary<Core.IPropertyInfo, object>
                                                {
                                                  {TwoPropertyRules.Value1Property, "a"},
@@ -833,7 +922,8 @@ namespace Csla.Test.ValidationRules
       var root = new TwoPropertyRules();
       var rule = new TwoProps(TwoPropertyRules.Value1Property, TwoPropertyRules.Value2Property);
 
-      var ctx = new Csla.Rules.RuleContext(null, rule, root,
+      var applicationContext = _testDIContext.CreateTestApplicationContext();
+      var ctx = new Csla.Rules.RuleContext(applicationContext, null, rule, root,
                                            new Dictionary<Core.IPropertyInfo, object>
                                                {
                                                  {TwoPropertyRules.Value1Property, "a"},
@@ -850,7 +940,8 @@ namespace Csla.Test.ValidationRules
       var root = new TwoPropertyRules();
       var rule = new TwoProps(TwoPropertyRules.Value1Property, TwoPropertyRules.Value2Property);
 
-      var ctx = new Csla.Rules.RuleContext(null, rule, root,
+      var applicationContext = _testDIContext.CreateTestApplicationContext();
+      var ctx = new Csla.Rules.RuleContext(applicationContext, null, rule, root,
                                            new Dictionary<Core.IPropertyInfo, object>
                                                {
                                                  {TwoPropertyRules.Value1Property, "a"},
@@ -867,7 +958,8 @@ namespace Csla.Test.ValidationRules
       var root = new TwoPropertyRules();
       var rule = new TwoProps(TwoPropertyRules.Value1Property, TwoPropertyRules.Value2Property);
 
-      var ctx = new Csla.Rules.RuleContext(null, rule, root,
+      var applicationContext = _testDIContext.CreateTestApplicationContext();
+      var ctx = new Csla.Rules.RuleContext(applicationContext, null, rule, root,
                                            new Dictionary<Core.IPropertyInfo, object>
                                                {
                                                  {TwoPropertyRules.Value1Property, "a"},
@@ -884,7 +976,8 @@ namespace Csla.Test.ValidationRules
       var root = new TwoPropertyRules();
       var rule = new TwoProps(TwoPropertyRules.Value1Property, TwoPropertyRules.Value2Property);
 
-      var ctx = new Csla.Rules.RuleContext(null, rule, root,
+      var applicationContext = _testDIContext.CreateTestApplicationContext();
+      var ctx = new Csla.Rules.RuleContext(applicationContext, null, rule, root,
                                            new Dictionary<Core.IPropertyInfo, object>
                                                {
                                                  {TwoPropertyRules.Value1Property, "a"},
@@ -901,7 +994,8 @@ namespace Csla.Test.ValidationRules
       var root = new TwoPropertyRules();
       var rule = new TwoProps(TwoPropertyRules.Value1Property, TwoPropertyRules.Value2Property);
 
-      var ctx = new Csla.Rules.RuleContext(null, rule, root,
+      var applicationContext = _testDIContext.CreateTestApplicationContext();
+      var ctx = new Csla.Rules.RuleContext(applicationContext, null, rule, root,
                                            new Dictionary<Core.IPropertyInfo, object>
                                                {
                                                  {TwoPropertyRules.Value1Property, "a"},
@@ -910,5 +1004,6 @@ namespace Csla.Test.ValidationRules
       ctx.AddSuccessResult(false);
       Assert.IsTrue(true, "Must not fail.");
     }
+
   }
 }

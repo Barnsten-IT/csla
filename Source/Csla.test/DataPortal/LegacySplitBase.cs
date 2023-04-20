@@ -27,30 +27,10 @@ namespace Csla.Test.DataPortalTest
 
     #endregion
 
-
-    #region Factory Methods
-
-    public static T NewObject()
-    {
-      return Csla.DataPortal.Create<T>();
-    }
-
-    public static T GetObject(int id)
-    {
-      return Csla.DataPortal.Fetch<T>(new Criteria(id));
-    }
-
-    public static void DeleteObject(int id)
-    {
-      Csla.DataPortal.Delete<T>(new Criteria(id));
-    }
-
-    #endregion
-
     #region Data Access
 
     [Serializable()]
-    private class Criteria : CriteriaBase<Criteria>
+    internal class Criteria : CriteriaBase<Criteria>
     {
       private int _id;
       public int Id
@@ -61,40 +41,47 @@ namespace Csla.Test.DataPortalTest
       { _id = id; }
     }
 
-    protected override void DataPortal_Create()
+    [Create]
+		protected void DataPortal_Create()
     {
       _id = 0;
-      Csla.ApplicationContext.GlobalContext.Clear();
-      ApplicationContext.GlobalContext.Add("LegacySplit", "Created");
+      TestResults.Reinitialise();
+      TestResults.Add("LegacySplit", "Created");
     }
 
     protected void DataPortal_Fetch(object criteria)
     {
       _id = ((Criteria)criteria).Id;
-      Csla.ApplicationContext.GlobalContext.Clear();
-      ApplicationContext.GlobalContext.Add("LegacySplit", "Fetched");
-    }
-    protected override void DataPortal_Insert()
-    {
-      Csla.ApplicationContext.GlobalContext.Clear();
-      ApplicationContext.GlobalContext.Add("LegacySplit", "Inserted");
+      TestResults.Reinitialise();
+      TestResults.Add("LegacySplit", "Fetched");
     }
 
-    protected override void DataPortal_Update()
+    [Insert]
+    protected void DataPortal_Insert()
     {
-      Csla.ApplicationContext.GlobalContext.Clear();
-      ApplicationContext.GlobalContext.Add("LegacySplit", "Updated");
+      TestResults.Reinitialise();
+      TestResults.Add("LegacySplit", "Inserted");
     }
 
-    protected void DataPortal_Delete(object criteria)
+    [Update]
+		protected void DataPortal_Update()
     {
-      Csla.ApplicationContext.GlobalContext.Clear();
-      ApplicationContext.GlobalContext.Add("LegacySplit", "Deleted");
+      TestResults.Reinitialise();
+      TestResults.Add("LegacySplit", "Updated");
     }
-    protected override void DataPortal_DeleteSelf()
+
+    [Delete]
+		protected void DataPortal_Delete(object criteria)
     {
-      Csla.ApplicationContext.GlobalContext.Clear();
-      ApplicationContext.GlobalContext.Add("LegacySplit", "SelfDeleted");
+      TestResults.Reinitialise();
+      TestResults.Add("LegacySplit", "Deleted");
+    }
+
+    [DeleteSelf]
+    protected void DataPortal_DeleteSelf()
+    {
+      TestResults.Reinitialise();
+      TestResults.Add("LegacySplit", "SelfDeleted");
     }
 
     #endregion

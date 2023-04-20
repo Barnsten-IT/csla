@@ -24,6 +24,10 @@ namespace Csla.Blazor
     /// </summary>
     string FriendlyName { get; }
     /// <summary>
+    /// Gets the property name for the property.
+    /// </summary>
+    string PropertyName { get; }
+    /// <summary>
     /// Gets the validation error messages for a
     /// property on the Model
     /// </summary>
@@ -57,5 +61,11 @@ namespace Csla.Blazor
     /// Event raised when a property changes.
     /// </summary>
     event PropertyChangedEventHandler PropertyChanged;
+    /// <summary>
+    /// Gets the System.Reflection.PropertyInfo object
+    /// representing the property.
+    /// </summary>
+    /// <returns></returns>
+    System.Reflection.PropertyInfo GetPropertyInfo();
   }
 }

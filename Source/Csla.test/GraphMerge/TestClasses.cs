@@ -38,9 +38,9 @@ namespace Csla.Test.GraphMerge
       private set { LoadProperty(ChildListProperty, value); }
     }
 
-    public void AddChild()
+    public void AddChild(IDataPortal<Foo> dataPortal)
     {
-      var child = Csla.DataPortal.Create<Foo>();
+      var child = dataPortal.Create();
       child.MarkAsChild();
       LoadProperty(ChildProperty, child);
     }
@@ -85,12 +85,22 @@ namespace Csla.Test.GraphMerge
       }
     }
 
+    [Create]
+    private void Create([Inject] IChildDataPortal<FooList> childDataPortal)
+    {
+      LoadProperty(ChildListProperty, childDataPortal.CreateChild());
+      BusinessRules.CheckRules();
+    }
+
+    [InsertChild]
     private void Child_Insert()
     { }
 
+    [UpdateChild]
     private void Child_Update()
     { }
 
+    [DeleteSelfChild]
     private void Child_DeleteSelf()
     { }
   }
@@ -111,7 +121,13 @@ namespace Csla.Test.GraphMerge
       DeletedList.Clear();
     }
 
-    protected override void DataPortal_Update()
+    [Create]
+    private void Create()
+    {
+    }
+
+    [Update]
+	protected void DataPortal_Update()
     {
       base.Child_Update();
     }
@@ -119,7 +135,13 @@ namespace Csla.Test.GraphMerge
 
   [Serializable]
   public class FooBindingList : BusinessBindingListBase<FooBindingList, Foo>
-  { }
+  {
+    [Create]
+    private void DataPortal_Create()
+    {
+
+    }
+  }
 
   [Serializable]
   public class FooDynamicList : DynamicListBase<Foo>

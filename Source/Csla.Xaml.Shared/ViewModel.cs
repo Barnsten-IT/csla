@@ -1,4 +1,4 @@
-﻿#if !XAMARIN && !NETFX_CORE
+﻿#if !XAMARIN && !NETFX_CORE && !MAUI
 //-----------------------------------------------------------------------
 // <copyright file="ViewModel.cs" company="Marimer LLC">
 //     Copyright (c) Marimer LLC. All rights reserved.
@@ -6,13 +6,6 @@
 // </copyright>
 // <summary>Base class used to create ViewModel objects,</summary>
 //-----------------------------------------------------------------------
-using System;
-using System.ComponentModel;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Windows;
-
 #if ANDROID
 namespace Csla.Axml
 #elif IOS
@@ -27,18 +20,8 @@ namespace Csla.Xaml
   /// InvokeMethod or Invoke.
   /// </summary>
   /// <typeparam name="T">Type of the Model object.</typeparam>
-  public abstract class ViewModel<T> : ViewModelBase<T>
+  public class ViewModel<T> : ViewModelBase<T>
   {
-    /// <summary>
-    /// Saves the Model, first committing changes
-    /// if ManagedObjectLifetime is true.
-    /// </summary>
-    [Obsolete("Use SaveAsync", true)]
-    public virtual void Save(object sender, ExecuteEventArgs e)
-    {
-      SaveAsync().RunSynchronously();
-    }
-
     /// <summary>
     /// Saves the Model, first committing changes
     /// if ManagedObjectLifetime is true.

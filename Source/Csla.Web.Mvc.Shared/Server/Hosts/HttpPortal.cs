@@ -13,9 +13,10 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using Csla.Server.Hosts.HttpChannel;
 using Csla.Core;
 using System.Security.Principal;
+using Csla.Serialization;
+using Csla.Server.Hosts.DataPortalChannel;
 
 namespace Csla.Server.Hosts
 {
@@ -25,21 +26,35 @@ namespace Csla.Server.Hosts
   /// </summary>
   public class HttpPortal
   {
+    private IDataPortalServer dataPortalServer;
+    private ApplicationContext ApplicationContext { get; set; }
+
+    /// <summary>
+    /// Creates an instance of the type
+    /// </summary>
+    /// <param name="applicationContext"></param>
+    /// <param name="dataPortal">Data portal server service</param>
+    public HttpPortal(ApplicationContext applicationContext, IDataPortalServer dataPortal)
+    {
+      dataPortalServer = dataPortal;
+      ApplicationContext = applicationContext;
+    }
+
     /// <summary>
     /// Create and initialize an existing business object.
     /// </summary>
     /// <param name="request">The request parameter object.</param>
 #pragma warning disable 1998
-    public async Task<HttpResponse> Create(CriteriaRequest request)
+    public async Task<DataPortalResponse> Create(CriteriaRequest request)
 #pragma warning restore 1998
     {
-      var result = new HttpResponse();
+      var result = ApplicationContext.CreateInstanceDI<DataPortalResponse>();
       try
       {
         request = ConvertRequest(request);
 
         // unpack criteria data into object
-        object criteria = GetCriteria(request.CriteriaData);
+        object criteria = GetCriteria(ApplicationContext, request.CriteriaData);
         if (criteria is Csla.DataPortalClient.PrimitiveCriteria)
         {
           criteria = ((Csla.DataPortalClient.PrimitiveCriteria)criteria).Value;
@@ -47,24 +62,21 @@ namespace Csla.Server.Hosts
 
         var objectType = Csla.Reflection.MethodCaller.GetType(AssemblyNameTranslator.GetAssemblyQualifiedName(request.TypeName), true);
         var context = new DataPortalContext(
-          (IPrincipal)MobileFormatter.Deserialize(request.Principal),
+          ApplicationContext, (IPrincipal)SerializationFormatterFactory.GetFormatter(ApplicationContext).Deserialize(request.Principal),
           true,
           request.ClientCulture,
           request.ClientUICulture,
-          (ContextDictionary)MobileFormatter.Deserialize(request.ClientContext),
-          (ContextDictionary)MobileFormatter.Deserialize(request.GlobalContext));
+          (ContextDictionary)SerializationFormatterFactory.GetFormatter(ApplicationContext).Deserialize(request.ClientContext));
 
-        var prtl = new Csla.Server.DataPortal();
-        var dpr = await prtl.Create(objectType, criteria, context, true);
+        var dpr = await dataPortalServer.Create(objectType, criteria, context, true);
 
         if (dpr.Error != null)
-          result.ErrorData = new HttpErrorInfo(dpr.Error);
-        result.GlobalContext = MobileFormatter.Serialize(dpr.GlobalContext);
-        result.ObjectData = MobileFormatter.Serialize(dpr.ReturnObject);
+          result.ErrorData = ApplicationContext.CreateInstance<DataPortalErrorInfo>(ApplicationContext, dpr.Error);
+        result.ObjectData = SerializationFormatterFactory.GetFormatter(ApplicationContext).Serialize(dpr.ReturnObject);
       }
       catch (Exception ex)
       {
-        result.ErrorData = new HttpErrorInfo(ex);
+        result.ErrorData = ApplicationContext.CreateInstance<DataPortalErrorInfo>(ApplicationContext, ex);
         throw;
       }
       finally
@@ -79,16 +91,16 @@ namespace Csla.Server.Hosts
     /// </summary>
     /// <param name="request">The request parameter object.</param>
 #pragma warning disable 1998
-    public async Task<HttpResponse> Fetch(CriteriaRequest request)
+    public async Task<DataPortalResponse> Fetch(CriteriaRequest request)
 #pragma warning restore 1998
     {
-      var result = new HttpResponse();
+      var result = ApplicationContext.CreateInstanceDI<DataPortalResponse>();
       try
       {
         request = ConvertRequest(request);
 
         // unpack criteria data into object
-        object criteria = GetCriteria(request.CriteriaData);
+        object criteria = GetCriteria(ApplicationContext, request.CriteriaData);
         if (criteria is Csla.DataPortalClient.PrimitiveCriteria)
         {
           criteria = ((Csla.DataPortalClient.PrimitiveCriteria)criteria).Value;
@@ -96,24 +108,21 @@ namespace Csla.Server.Hosts
 
         var objectType = Csla.Reflection.MethodCaller.GetType(AssemblyNameTranslator.GetAssemblyQualifiedName(request.TypeName), true);
         var context = new DataPortalContext(
-          (IPrincipal)MobileFormatter.Deserialize(request.Principal),
+          ApplicationContext, (IPrincipal)SerializationFormatterFactory.GetFormatter(ApplicationContext).Deserialize(request.Principal),
           true,
           request.ClientCulture,
           request.ClientUICulture,
-          (ContextDictionary)MobileFormatter.Deserialize(request.ClientContext),
-          (ContextDictionary)MobileFormatter.Deserialize(request.GlobalContext));
+          (ContextDictionary)SerializationFormatterFactory.GetFormatter(ApplicationContext).Deserialize(request.ClientContext));
 
-        var prtl = new Csla.Server.DataPortal();
-        var dpr = await prtl.Fetch(objectType, criteria, context, true);
+        var dpr = await dataPortalServer.Fetch(objectType, criteria, context, true);
 
         if (dpr.Error != null)
-          result.ErrorData = new HttpErrorInfo(dpr.Error);
-        result.GlobalContext = MobileFormatter.Serialize(dpr.GlobalContext);
-        result.ObjectData = MobileFormatter.Serialize(dpr.ReturnObject);
+          result.ErrorData = ApplicationContext.CreateInstance<DataPortalErrorInfo>(ApplicationContext, dpr.Error);
+        result.ObjectData = SerializationFormatterFactory.GetFormatter(ApplicationContext).Serialize(dpr.ReturnObject);
       }
       catch (Exception ex)
       {
-        result.ErrorData = new HttpErrorInfo(ex);
+        result.ErrorData = ApplicationContext.CreateInstance<DataPortalErrorInfo>(ApplicationContext, ex);
         throw;
       }
       finally
@@ -128,36 +137,33 @@ namespace Csla.Server.Hosts
     /// </summary>
     /// <param name="request">The request parameter object.</param>
 #pragma warning disable 1998
-    public async Task<HttpResponse> Update(UpdateRequest request)
+    public async Task<DataPortalResponse> Update(UpdateRequest request)
 #pragma warning restore 1998
     {
-      var result = new HttpResponse();
+      var result = ApplicationContext.CreateInstanceDI<DataPortalResponse>();
       try
       {
         request = ConvertRequest(request);
         // unpack object
-        object obj = GetCriteria(request.ObjectData);
+        object obj = GetCriteria(ApplicationContext, request.ObjectData);
 
         var context = new DataPortalContext(
-          (IPrincipal)MobileFormatter.Deserialize(request.Principal),
+          ApplicationContext, (IPrincipal)SerializationFormatterFactory.GetFormatter(ApplicationContext).Deserialize(request.Principal),
           true,
           request.ClientCulture,
           request.ClientUICulture,
-          (ContextDictionary)MobileFormatter.Deserialize(request.ClientContext),
-          (ContextDictionary)MobileFormatter.Deserialize(request.GlobalContext));
+          (ContextDictionary)SerializationFormatterFactory.GetFormatter(ApplicationContext).Deserialize(request.ClientContext));
 
-        var prtl = new Csla.Server.DataPortal();
-        var dpr = await prtl.Update(obj, context, true);
+        var dpr = await dataPortalServer.Update(obj, context, true);
 
         if (dpr.Error != null)
-          result.ErrorData = new HttpErrorInfo(dpr.Error);
+          result.ErrorData = ApplicationContext.CreateInstance<DataPortalErrorInfo>(ApplicationContext, dpr.Error);
 
-        result.GlobalContext = MobileFormatter.Serialize(dpr.GlobalContext);
-        result.ObjectData = MobileFormatter.Serialize(dpr.ReturnObject);
+        result.ObjectData = SerializationFormatterFactory.GetFormatter(ApplicationContext).Serialize(dpr.ReturnObject);
       }
       catch (Exception ex)
       {
-        result.ErrorData = new HttpErrorInfo(ex);
+        result.ErrorData = ApplicationContext.CreateInstance<DataPortalErrorInfo>(ApplicationContext, ex);
         throw;
       }
       finally
@@ -172,16 +178,16 @@ namespace Csla.Server.Hosts
     /// </summary>
     /// <param name="request">The request parameter object.</param>
 #pragma warning disable 1998
-    public async Task<HttpResponse> Delete(CriteriaRequest request)
+    public async Task<DataPortalResponse> Delete(CriteriaRequest request)
 #pragma warning restore 1998
     {
-      var result = new HttpResponse();
+      var result = ApplicationContext.CreateInstanceDI<DataPortalResponse>();
       try
       {
         request = ConvertRequest(request);
 
         // unpack criteria data into object
-        object criteria = GetCriteria(request.CriteriaData);
+        object criteria = GetCriteria(ApplicationContext, request.CriteriaData);
         if (criteria is Csla.DataPortalClient.PrimitiveCriteria)
         {
           criteria = ((Csla.DataPortalClient.PrimitiveCriteria)criteria).Value;
@@ -189,24 +195,21 @@ namespace Csla.Server.Hosts
 
         var objectType = Csla.Reflection.MethodCaller.GetType(AssemblyNameTranslator.GetAssemblyQualifiedName(request.TypeName), true);
         var context = new DataPortalContext(
-          (IPrincipal)MobileFormatter.Deserialize(request.Principal),
+          ApplicationContext, (IPrincipal)SerializationFormatterFactory.GetFormatter(ApplicationContext).Deserialize(request.Principal),
           true,
           request.ClientCulture,
           request.ClientUICulture,
-          (ContextDictionary)MobileFormatter.Deserialize(request.ClientContext),
-          (ContextDictionary)MobileFormatter.Deserialize(request.GlobalContext));
+          (ContextDictionary)SerializationFormatterFactory.GetFormatter(ApplicationContext).Deserialize(request.ClientContext));
 
-        var prtl = new Csla.Server.DataPortal();
-        var dpr = await prtl.Delete(objectType, criteria, context, true);
+        var dpr = await dataPortalServer.Delete(objectType, criteria, context, true);
 
         if (dpr.Error != null)
-          result.ErrorData = new HttpErrorInfo(dpr.Error);
-        result.GlobalContext = MobileFormatter.Serialize(dpr.GlobalContext);
-        result.ObjectData = MobileFormatter.Serialize(dpr.ReturnObject);
+          result.ErrorData = ApplicationContext.CreateInstance<DataPortalErrorInfo>(ApplicationContext, dpr.Error);
+        result.ObjectData = SerializationFormatterFactory.GetFormatter(ApplicationContext).Serialize(dpr.ReturnObject);
       }
       catch (Exception ex)
       {
-        result.ErrorData = new HttpErrorInfo(ex);
+        result.ErrorData = ApplicationContext.CreateInstance<DataPortalErrorInfo>(ApplicationContext, ex);
         throw;
       }
       finally
@@ -218,15 +221,15 @@ namespace Csla.Server.Hosts
 
     #region Criteria
 
-    private static object GetCriteria(byte[] criteriaData)
+    private static object GetCriteria(ApplicationContext applicationContext, byte[] criteriaData)
     {
       object criteria = null;
       if (criteriaData != null)
-        criteria = MobileFormatter.Deserialize(criteriaData);
+        criteria = SerializationFormatterFactory.GetFormatter(applicationContext).Deserialize(criteriaData);
       return criteria;
     }
 
-    #endregion
+    #endregion Criteria
 
     #region Extention Method for Requests
 
@@ -255,11 +258,11 @@ namespace Csla.Server.Hosts
     /// comes back from the network.
     /// </summary>
     /// <param name="response">Response object.</param>
-    protected virtual HttpResponse ConvertResponse(HttpResponse response)
+    protected virtual DataPortalResponse ConvertResponse(DataPortalResponse response)
     {
       return response;
     }
 
-    #endregion
+    #endregion Extention Method for Requests
   }
 }

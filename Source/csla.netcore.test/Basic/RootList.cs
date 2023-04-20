@@ -22,11 +22,9 @@ namespace Csla.Test.Basic
       AllowRemove = true;
     }
 
-    protected override object AddNewCore()
+    [Create]
+    private void Create()
     {
-      RootListChild child = new RootListChild();
-      Add(child);
-      return child;
     }
   }
 

@@ -6,11 +6,8 @@
 // <summary>Implements a data portal proxy to relay data portal</summary>
 //-----------------------------------------------------------------------
 using System;
-using System.Threading;
 using System.Threading.Tasks;
-using Csla.Core;
 using Csla.DataPortalClient;
-using Csla.Serialization.Mobile;
 using Csla.Server;
 using RabbitMQ.Client;
 
@@ -20,58 +17,42 @@ namespace Csla.Channels.RabbitMq
   /// Implements a data portal proxy to relay data portal
   /// calls to a remote application server by using RabbitMQ.
   /// </summary>
-  public class RabbitMqProxy : IDataPortalProxy, IDisposable
+  public class RabbitMqProxy : DataPortalProxy, IDisposable
   {
-    /// <summary>
-    /// Creates an instance of the object, initializing
-    /// it to use the DefaultUrl value.
-    /// </summary>
-    public RabbitMqProxy()
-    {
-      this.DataPortalUrl = ApplicationContext.DataPortalUrlString;
-    }
-
     /// <summary>
     /// Creates an instance of the object, initializing
     /// it to use the supplied URL.
     /// </summary>
-    /// <param name="dataPortalUrl">RabbitMQ service URL</param>
-    public RabbitMqProxy(string dataPortalUrl)
+    /// <param name="applicationContext"></param>
+    /// <param name="options">Proxy options</param>
+    public RabbitMqProxy(ApplicationContext applicationContext, RabbitMqProxyOptions options)
+      : base(applicationContext)
     {
-      this.DataPortalUrl = dataPortalUrl;
+      DataPortalUrl = options.DataPortalUrl;
     }
-
-    /// <summary>
-    /// Gets the URL address for the RabbitMQ
-    /// service used by the data portal.
-    /// </summary>
-    public string DataPortalUrl { get; protected set; }
-
-    /// <summary>
-    /// Gets a value indicating whether the data portal
-    /// is hosted on a remote server.
-    /// </summary>
-    public bool IsServerRemote => true;
 
     /// <summary>
     /// Gets or sets the timeout for network
     /// operations in seconds (default is 30 seconds).
     /// </summary>
-    public int Timeout { get; set; } = 30;
+    public override int Timeout { get; set; } = 30;
 
     /// <summary>
     /// Gets or sets the connection to the RabbitMQ service.
     /// </summary>
     protected IConnection Connection { get; set; }
+
     /// <summary>
     /// Gets or sets the channel (model) for RabbitMQ.
     /// </summary>
     protected IModel Channel { get; set; }
+
     /// <summary>
     /// Gets or sets the name of the data portal
     /// service queue.
     /// </summary>
     protected string DataPortalQueueName { get; set; }
+
     /// <summary>
     /// Gets or sets the queue listener that handles
     /// reply messages.
@@ -123,53 +104,13 @@ namespace Csla.Channels.RabbitMq
     /// <param name="criteria">Criteria object describing business object.</param>
     /// <param name="context">DataPortalContext object passed to the server.</param>
     /// <param name="isSync">True if the client-side proxy should synchronously invoke the server.</param>
-    public async Task<DataPortalResult> Create(Type objectType, object criteria, DataPortalContext context, bool isSync)
+    public override async Task<DataPortalResult> Create(Type objectType, object criteria, DataPortalContext context, bool isSync)
     {
       if (isSync)
         throw new NotSupportedException("isSync == true");
 
       InitializeRabbitMQ();
-      DataPortalResult result;
-      try
-      {
-        var request = GetBaseCriteriaRequest();
-        request.TypeName = AssemblyNameTranslator.GetAssemblyQualifiedName(objectType.AssemblyQualifiedName);
-        if (!(criteria is IMobileObject))
-        {
-          criteria = new PrimitiveCriteria(criteria);
-        }
-        request.CriteriaData = MobileFormatter.Serialize(criteria);
-        request = ConvertRequest(request);
-
-        var serialized = MobileFormatter.Serialize(request);
-
-        serialized = await CallDataPortalServer(serialized, "create");
-
-        var response = (Server.Hosts.HttpChannel.HttpResponse)MobileFormatter.Deserialize(serialized);
-        response = ConvertResponse(response);
-        var globalContext = (ContextDictionary)MobileFormatter.Deserialize(response.GlobalContext);
-        if (response != null && response.ErrorData == null)
-        {
-          var obj = MobileFormatter.Deserialize(response.ObjectData);
-          result = new DataPortalResult(obj, null, globalContext);
-        }
-        else if (response != null && response.ErrorData != null)
-        {
-          var ex = new DataPortalException(response.ErrorData);
-          result = new DataPortalResult(null, ex, globalContext);
-        }
-        else
-        {
-          throw new DataPortalException("null response", null);
-        }
-      }
-      catch (Exception ex)
-      {
-        result = new DataPortalResult(null, ex, null);
-      }
-      if (result.Error != null)
-        throw result.Error;
-      return result;
+      return await base.Create(objectType, criteria, context, isSync);
     }
 
     /// <summary>
@@ -182,53 +123,13 @@ namespace Csla.Channels.RabbitMq
     /// <see cref="Server.DataPortalContext" /> object passed to the server.
     /// </param>
     /// <param name="isSync">True if the client-side proxy should synchronously invoke the server.</param>
-    public async Task<DataPortalResult> Fetch(Type objectType, object criteria, DataPortalContext context, bool isSync)
+    public override async Task<DataPortalResult> Fetch(Type objectType, object criteria, DataPortalContext context, bool isSync)
     {
       if (isSync)
         throw new NotSupportedException("isSync == true");
 
       InitializeRabbitMQ();
-      DataPortalResult result;
-      try
-      {
-        var request = GetBaseCriteriaRequest();
-        request.TypeName = AssemblyNameTranslator.GetAssemblyQualifiedName(objectType.AssemblyQualifiedName);
-        if (!(criteria is IMobileObject))
-        {
-          criteria = new PrimitiveCriteria(criteria);
-        }
-        request.CriteriaData = MobileFormatter.Serialize(criteria);
-        request = ConvertRequest(request);
-
-        var serialized = MobileFormatter.Serialize(request);
-
-        serialized = await CallDataPortalServer(serialized, "fetch");
-
-        var response = (Server.Hosts.HttpChannel.HttpResponse)MobileFormatter.Deserialize(serialized);
-        response = ConvertResponse(response);
-        var globalContext = (ContextDictionary)MobileFormatter.Deserialize(response.GlobalContext);
-        if (response != null && response.ErrorData == null)
-        {
-          var obj = MobileFormatter.Deserialize(response.ObjectData);
-          result = new DataPortalResult(obj, null, globalContext);
-        }
-        else if (response != null && response.ErrorData != null)
-        {
-          var ex = new DataPortalException(response.ErrorData);
-          result = new DataPortalResult(null, ex, globalContext);
-        }
-        else
-        {
-          throw new DataPortalException("null response", null);
-        }
-      }
-      catch (Exception ex)
-      {
-        result = new DataPortalResult(null, ex, null);
-      }
-      if (result.Error != null)
-        throw result.Error;
-      return result;
+      return await base.Fetch(objectType, criteria, context, isSync);
     }
 
     /// <summary>
@@ -240,48 +141,13 @@ namespace Csla.Channels.RabbitMq
     /// <see cref="Server.DataPortalContext" /> object passed to the server.
     /// </param>
     /// <param name="isSync">True if the client-side proxy should synchronously invoke the server.</param>
-    public async Task<DataPortalResult> Update(object obj, DataPortalContext context, bool isSync)
+    public override async Task<DataPortalResult> Update(object obj, DataPortalContext context, bool isSync)
     {
       if (isSync)
         throw new NotSupportedException("isSync == true");
 
       InitializeRabbitMQ();
-      DataPortalResult result;
-      try
-      {
-        var request = GetBaseUpdateCriteriaRequest();
-        request.ObjectData = MobileFormatter.Serialize(obj);
-        request = ConvertRequest(request);
-
-        var serialized = MobileFormatter.Serialize(request);
-
-        serialized = await CallDataPortalServer(serialized, "update");
-
-        var response = (Csla.Server.Hosts.HttpChannel.HttpResponse)MobileFormatter.Deserialize(serialized);
-        response = ConvertResponse(response);
-        var globalContext = (ContextDictionary)MobileFormatter.Deserialize(response.GlobalContext);
-        if (response != null && response.ErrorData == null)
-        {
-          var newobj = MobileFormatter.Deserialize(response.ObjectData);
-          result = new DataPortalResult(newobj, null, globalContext);
-        }
-        else if (response != null && response.ErrorData != null)
-        {
-          var ex = new DataPortalException(response.ErrorData);
-          result = new DataPortalResult(null, ex, globalContext);
-        }
-        else
-        {
-          throw new DataPortalException("null response", null);
-        }
-      }
-      catch (Exception ex)
-      {
-        result = new DataPortalResult(null, ex, null);
-      }
-      if (result.Error != null)
-        throw result.Error;
-      return result;
+      return await base.Update(obj, context, isSync);
     }
 
     /// <summary>
@@ -294,59 +160,28 @@ namespace Csla.Channels.RabbitMq
     /// <see cref="Server.DataPortalContext" /> object passed to the server.
     /// </param>
     /// <param name="isSync">True if the client-side proxy should synchronously invoke the server.</param>
-    public async Task<DataPortalResult> Delete(Type objectType, object criteria, DataPortalContext context, bool isSync)
+    public override async Task<DataPortalResult> Delete(Type objectType, object criteria, DataPortalContext context, bool isSync)
     {
       if (isSync)
         throw new NotSupportedException("isSync == true");
 
       InitializeRabbitMQ();
-      DataPortalResult result;
-      try
-      {
-        var request = GetBaseCriteriaRequest();
-        request.TypeName = AssemblyNameTranslator.GetAssemblyQualifiedName(objectType.AssemblyQualifiedName);
-        if (!(criteria is IMobileObject))
-        {
-          criteria = new PrimitiveCriteria(criteria);
-        }
-        request.CriteriaData = MobileFormatter.Serialize(criteria);
-        request = ConvertRequest(request);
-
-        var serialized = MobileFormatter.Serialize(request);
-
-        serialized = await CallDataPortalServer(serialized, "delete");
-
-        var response = (Server.Hosts.HttpChannel.HttpResponse)MobileFormatter.Deserialize(serialized);
-        response = ConvertResponse(response);
-        var globalContext = (ContextDictionary)MobileFormatter.Deserialize(response.GlobalContext);
-        if (response != null && response.ErrorData == null)
-        {
-          var obj = MobileFormatter.Deserialize(response.ObjectData);
-          result = new DataPortalResult(obj, null, globalContext);
-        }
-        else if (response != null && response.ErrorData != null)
-        {
-          var ex = new DataPortalException(response.ErrorData);
-          result = new DataPortalResult(null, ex, globalContext);
-        }
-        else
-        {
-          throw new DataPortalException("null response", null);
-        }
-      }
-      catch (Exception ex)
-      {
-        result = new DataPortalResult(null, ex, null);
-      }
-      if (result.Error != null)
-        throw result.Error;
-      return result;
+      return await base.Delete(objectType, criteria, context, isSync);
     }
 
-    private async Task<byte[]> CallDataPortalServer(byte[] serialized, string operation)
+    /// <summary>
+    /// Create message and send to Rabbit MQ server.
+    /// Return Response from server
+    /// </summary>
+    /// <param name="serialized">Serialised request</param>
+    /// <param name="operation">DataPortal operation</param>
+    /// <param name="routingToken">Routing Tag for server</param>
+    /// <param name="isSync">True if the client-side proxy should synchronously invoke the server.</param>
+    /// <returns>Serialised response from server</returns>
+    protected override async Task<byte[]> CallDataPortalServer(byte[] serialized, string operation, string routingToken, bool isSync)
     {
       var correlationId = Guid.NewGuid().ToString();
-      var resetEvent = new Csla.Reflection.AsyncManualResetEvent();
+      var resetEvent = new Csla.Threading.AsyncManualResetEvent();
       var wip = Wip.WorkInProgress.GetOrAdd(correlationId, new WipItem { ResetEvent = resetEvent });
 
       SendMessage(QueueListener.ReplyQueue.QueueName, correlationId, operation, serialized);
@@ -384,85 +219,5 @@ namespace Csla.Channels.RabbitMq
       Channel = null;
       Connection = null;
     }
-
-    #region Conversions
-
-    /// <summary>
-    /// Override this method to manipulate the message
-    /// request data sent to the server.
-    /// </summary>
-    /// <param name="request">Update request data.</param>
-    protected virtual Csla.Server.Hosts.HttpChannel.UpdateRequest ConvertRequest(Csla.Server.Hosts.HttpChannel.UpdateRequest request)
-    {
-      return request;
-    }
-
-    /// <summary>
-    /// Override this method to manipulate the message
-    /// request data sent to the server.
-    /// </summary>
-    /// <param name="request">Criteria request data.</param>
-    protected virtual Csla.Server.Hosts.HttpChannel.CriteriaRequest ConvertRequest(Csla.Server.Hosts.HttpChannel.CriteriaRequest request)
-    {
-      return request;
-    }
-
-    /// <summary>
-    /// Override this method to manipulate the message
-    /// request data returned from the server.
-    /// </summary>
-    /// <param name="response">Response data.</param>
-    protected virtual Csla.Server.Hosts.HttpChannel.HttpResponse ConvertResponse(Csla.Server.Hosts.HttpChannel.HttpResponse response)
-    {
-      return response;
-    }
-
-    #endregion
-
-    #region Criteria
-
-    private Csla.Server.Hosts.HttpChannel.CriteriaRequest GetBaseCriteriaRequest()
-    {
-      var request = new Csla.Server.Hosts.HttpChannel.CriteriaRequest
-      {
-        CriteriaData = null,
-        ClientContext = MobileFormatter.Serialize(ApplicationContext.ClientContext),
-        GlobalContext = MobileFormatter.Serialize(ApplicationContext.GlobalContext)
-      };
-      if (ApplicationContext.AuthenticationType == "Windows")
-      {
-        request.Principal = MobileFormatter.Serialize(null);
-      }
-      else
-      {
-        request.Principal = MobileFormatter.Serialize(ApplicationContext.User);
-      }
-      request.ClientCulture = System.Globalization.CultureInfo.CurrentCulture.Name;
-      request.ClientUICulture = System.Globalization.CultureInfo.CurrentUICulture.Name;
-      return request;
-    }
-
-    private Csla.Server.Hosts.HttpChannel.UpdateRequest GetBaseUpdateCriteriaRequest()
-    {
-      var request = new Csla.Server.Hosts.HttpChannel.UpdateRequest
-      {
-        ObjectData = null,
-        ClientContext = MobileFormatter.Serialize(ApplicationContext.ClientContext),
-        GlobalContext = MobileFormatter.Serialize(ApplicationContext.GlobalContext)
-      };
-      if (ApplicationContext.AuthenticationType == "Windows")
-      {
-        request.Principal = MobileFormatter.Serialize(null);
-      }
-      else
-      {
-        request.Principal = MobileFormatter.Serialize(ApplicationContext.User);
-      }
-      request.ClientCulture = Thread.CurrentThread.CurrentCulture.Name;
-      request.ClientUICulture = Thread.CurrentThread.CurrentUICulture.Name;
-      return request;
-    }
-
-    #endregion
   }
 }

@@ -15,13 +15,15 @@ Vid ny release
 
 CSLA .NET
 ====
-[![Build status](https://ci.appveyor.com/api/projects/status/jl2k3pjvtqca4lei/branch/master?svg=true)](https://ci.appveyor.com/project/rockfordlhotka/csla/branch/master)
-[![Dependabot Status](https://api.dependabot.com/badges/status?host=github&repo=MarimerLLC/csla)](https://dependabot.com)
-[![Join the chat at https://gitter.im/MarimerLLC/cslaforum](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/MarimerLLC/cslaforum?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Build status](https://github.com/MarimerLLC/csla/actions/workflows/ci.yaml/badge.svg)](https://github.com/MarimerLLC/csla/actions/workflows/ci.yaml)
 
-[![NuGet](https://img.shields.io/nuget/v/Csla.svg)](https://www.nuget.org/packages/Csla)
 
-![](https://raw.github.com/MarimerLLC/csla/master/Support/Logos/csla%20win8_mid.png)
+[![Bugs](https://img.shields.io/github/issues/marimerllc/csla/kind%2Fbug)](https://github.com/MarimerLLC/csla/issues?q=is%3Aissue+is%3Aopen+label%3Akind%2Fbug)
+[![Roadmap](https://img.shields.io/github/issues/marimerllc/csla/flag%2Froadmap)](https://github.com/MarimerLLC/csla/issues?q=is%3Aissue+is%3Aopen+label%3Aflag%2Froadmap)
+
+[![NuGet](https://img.shields.io/nuget/v/Csla.svg)](https://www.nuget.org/packages/Csla) [![stability-stable](https://img.shields.io/badge/stability-stable-green.svg)](https://github.com/emersion/stability-badges#stable)
+
+![](https://raw.github.com/MarimerLLC/csla/main/Support/Logos/csla%20win8_mid.png)
 
 ### A home for your business logic
 
@@ -30,19 +32,18 @@ CSLA .NET is a software development framework that helps you build a reusable, m
 More information about CSLA .NET is available from the following sources:
 
 * [CSLA .NET home page](http://www.cslanet.com)
+* [Announcements](https://github.com/MarimerLLC/csla/discussions?discussions_q=category%3AAnnouncements)
 * [Sponsor CSLA .NET](https://github.com/sponsors/rockfordlhotka)
-* [CSLA .NET FAQ](https://github.com/MarimerLLC/csla/blob/master/docs/index.md)
-* [Getting started with CSLA .NET](https://github.com/MarimerLLC/csla/blob/master/docs/Getting-started.md)
-* [CSLA .NET forum](https://github.com/marimerllc/cslaforum) 
-* [CSLA .NET training videos and ebooks](https://github.com/MarimerLLC/csla/blob/master/docs/Books-and-videos.md)
-
-Patron
-------
-CSLA .NET would not exist in its current form without generous support from
-
-[![Magenic](docs/images/magenic-logo.png)](https://magenic.com)
+* [Version 6.0.0 API Documentation](https://cslanet.com/6.0.0/html/md__c___users_korye_source_repos_csla_6_0_0__source_readme.html)
+* [Version 5.4.2 API Documentation](https://cslanet.com/5.4.2/html/index.html)
+* Community
+   * [CSLA .NET discussions](https://github.com/MarimerLLC/csla/discussions) 
+   * [Discord server](https://discord.gg/9ahKjb7ccf)
+* [CSLA .NET FAQ](https://github.com/MarimerLLC/csla/blob/main/docs/readme.md)
+* [Getting started with CSLA .NET](https://github.com/MarimerLLC/csla/blob/main/docs/Getting-started.md)
+* [CSLA .NET training videos and ebooks](https://github.com/MarimerLLC/csla/blob/main/docs/Books-and-videos.md)
 
 License
 -------
 CSLA .NET is copyright Marimer LLC.
-Its use is governed by the [MIT license](https://github.com/MarimerLLC/csla/blob/master/license.md).
+Its use is governed by the [MIT license](https://github.com/MarimerLLC/csla/blob/main/license.md).

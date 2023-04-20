@@ -15,14 +15,6 @@ namespace Csla.Test.PropertyGetSet
   [Serializable]
   public class EditableGetSetRuleValidation : BusinessBase<EditableGetSetRuleValidation>
   {
-    #region Constructor
-
-    private EditableGetSetRuleValidation()
-    {
-    }
-
-    #endregion
-
     #region Business Rules
 
     protected override void AddBusinessRules()
@@ -69,7 +61,8 @@ namespace Csla.Test.PropertyGetSet
     #region Data Access
 
     [RunLocal]
-    protected override void DataPortal_Create()
+    [Create]
+		protected void DataPortal_Create()
     {
       BusinessRules.CheckRules();
     }
@@ -78,9 +71,9 @@ namespace Csla.Test.PropertyGetSet
 
     #region Factory Methods
 
-    public static EditableGetSetRuleValidation NewEditableGetSetValidation()
+    public static EditableGetSetRuleValidation NewEditableGetSetValidation(IDataPortal<EditableGetSetRuleValidation> dataPortal)
     {
-      return Csla.DataPortal.Create<EditableGetSetRuleValidation>();
+      return dataPortal.Create();
     }
 
     #endregion

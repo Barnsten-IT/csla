@@ -76,19 +76,28 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Microsoft.Extensions.DependencyInjection, Version=2.2.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
-      <HintPath>..\..\..\packages\Microsoft.Extensions.DependencyInjection.2.2.0\lib\net461\Microsoft.Extensions.DependencyInjection.dll</HintPath>
+    <Reference Include="Microsoft.Bcl.AsyncInterfaces, Version=5.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\Microsoft.Bcl.AsyncInterfaces.5.0.0\lib\net461\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.Extensions.DependencyInjection.Abstractions, Version=2.2.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
-      <HintPath>..\..\..\packages\Microsoft.Extensions.DependencyInjection.Abstractions.2.2.0\lib\netstandard2.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll</HintPath>
+    <Reference Include="Microsoft.Extensions.DependencyInjection, Version=5.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\Microsoft.Extensions.DependencyInjection.5.0.0\lib\net461\Microsoft.Extensions.DependencyInjection.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Extensions.DependencyInjection.Abstractions, Version=5.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\Microsoft.Extensions.DependencyInjection.Abstractions.5.0.0\lib\net461\Microsoft.Extensions.DependencyInjection.Abstractions.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.configuration" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
+    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=5.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\System.Runtime.CompilerServices.Unsafe.5.0.0\lib\net45\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+    </Reference>
     <Reference Include="System.Runtime.Serialization">
       <RequiredTargetFramework>3.0</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Threading.Tasks.Extensions, Version=4.2.0.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\System.Threading.Tasks.Extensions.4.5.4\lib\net461\System.Threading.Tasks.Extensions.dll</HintPath>
     </Reference>
     <Reference Include="System.Web" />
     <Reference Include="System.Web.ApplicationServices" />
@@ -102,12 +111,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\..\Authorization\TestIdentity.cs">
-      <Link>Security\TestIdentity.cs</Link>
-    </Compile>
-    <Compile Include="..\..\Authorization\TestPrincipal.cs">
-      <Link>Security\TestPrincipal.cs</Link>
-    </Compile>
     <Compile Include="..\..\LogicalExecutionLocation\LocationBusinessBase.cs">
       <Link>LogicalExecutionLocation\LocationBusinessBase.cs</Link>
     </Compile>
@@ -151,13 +154,6 @@
     <Compile Include="ReadOnlyTests\ReadOnlyPerson.cs" />
     <Compile Include="ReadOnlyTests\ReadOnlyPerson.partial.cs" />
     <Compile Include="ReadOnlyTests\ReadOnlyPersonList.cs" />
-    <Compile Include="Security\MockMembershipProvider.cs" />
-    <Compile Include="Security\MockRoleProvider.cs" />
-    <Compile Include="Security\SilverlightIdentity.cs" />
-    <Compile Include="Security\SilverlightMembershipIdentity.cs" />
-    <Compile Include="Security\SilverlightPrincipal.cs" />
-    <Compile Include="Security\SilverlightPrincipal.server.cs" />
-    <Compile Include="Security\SilverlightWindowsIdentity.cs" />
     <Compile Include="TestProxies\AppDomainProxy.cs" />
     <Compile Include="Validation\RootThrowsException.cs" />
     <Compile Include="Validation\RuleWithCyrillic.cs" />
@@ -197,9 +193,9 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Csla.Net4.6\Csla.Net4.6.csproj">
+    <ProjectReference Include="..\..\..\Csla\Csla.csproj">
       <Project>{9da591ed-c570-47ac-8e5d-35b039e07973}</Project>
-      <Name>Csla.Net4.6</Name>
+      <Name>Csla</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

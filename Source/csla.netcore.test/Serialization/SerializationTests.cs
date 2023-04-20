@@ -8,6 +8,10 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Csla.TestHelpers;
+using Microsoft.Extensions.DependencyInjection;
+using Csla.Configuration;
+using System.IO;
 
 #if !NUNIT
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -25,45 +29,31 @@ namespace Csla.Test.Serialization
   [TestClass]
   public class SerializationTests
   {
+    private static TestDIContext _testDIContext;
+
+    [ClassInitialize]
+    public static void ClassInitialize(TestContext context)
+    {
+      _testDIContext = TestDIContextFactory.CreateDefaultContext();
+    }
+
     [TestMethod]
     public void CorrectDefaultSerializer()
     {
       var serializer = ApplicationContext.SerializationFormatter;
-      Assert.AreEqual(ApplicationContext.SerializationFormatters.MobileFormatter, serializer);
+      Assert.AreEqual(typeof(Csla.Serialization.Mobile.MobileFormatter), serializer);
     }
 
     [TestMethod]
     public void UseMobileFormatter()
     {
-      try
-      {
-        Csla.Configuration.ConfigurationManager.AppSettings["CslaSerializationFormatter"] = "MobileFormatter";
-        var serializer = ApplicationContext.SerializationFormatter;
-        Assert.AreEqual(ApplicationContext.SerializationFormatters.MobileFormatter, serializer);
-        var s = Csla.Serialization.SerializationFormatterFactory.GetFormatter();
-        Assert.IsInstanceOfType(s, typeof(Csla.Serialization.Mobile.MobileFormatter));
-      }
-      finally
-      {
-        Csla.Configuration.ConfigurationManager.AppSettings["CslaSerializationFormatter"] = "MobileFormatter";
-      }
-    }
+      ApplicationContext applicationContext;
+      applicationContext = _testDIContext.CreateTestApplicationContext();
 
-    [TestMethod]
-    public void UseBinaryFormatter()
-    {
-      try
-      {
-        Csla.Configuration.ConfigurationManager.AppSettings["CslaSerializationFormatter"] = "BinaryFormatter";
-        var serializer = ApplicationContext.SerializationFormatter;
-        Assert.AreEqual(ApplicationContext.SerializationFormatters.BinaryFormatter, serializer);
-        var s = Csla.Serialization.SerializationFormatterFactory.GetFormatter();
-        Assert.IsInstanceOfType(s, typeof(Csla.Serialization.BinaryFormatterWrapper));
-      }
-      finally
-      {
-        Csla.Configuration.ConfigurationManager.AppSettings["CslaSerializationFormatter"] = "MobileFormatter";
-      }
+      var serializer = ApplicationContext.SerializationFormatter;
+      Assert.AreEqual(typeof(Csla.Serialization.Mobile.MobileFormatter), serializer);
+      var s = Csla.Serialization.SerializationFormatterFactory.GetFormatter(applicationContext);
+      Assert.IsInstanceOfType(s, typeof(Csla.Serialization.Mobile.MobileFormatter));
     }
 
     [TestMethod]
@@ -71,16 +61,34 @@ namespace Csla.Test.Serialization
     {
       try
       {
-        Csla.Configuration.ConfigurationManager.AppSettings["CslaSerializationFormatter"] = "Csla.Serialization.Mobile.MobileFormatter,Csla";
-        var serializer = ApplicationContext.SerializationFormatter;
-        Assert.AreEqual(ApplicationContext.SerializationFormatters.CustomFormatter, serializer);
-        var s = Csla.Serialization.SerializationFormatterFactory.GetFormatter();
-        Assert.IsInstanceOfType(s, typeof(Csla.Serialization.Mobile.MobileFormatter));
+        IServiceCollection services = new ServiceCollection();
+        services.AddCsla(o => o
+          .Serialization(o => o.SerializationFormatter(typeof(CustomFormatter))));
+        var provider = services.BuildServiceProvider();
+        var applicationContext = provider.GetRequiredService<ApplicationContext>();
+
+        var serializerType = ApplicationContext.SerializationFormatter;
+        Assert.AreEqual(typeof(CustomFormatter), serializerType);
+        var s = Csla.Serialization.SerializationFormatterFactory.GetFormatter(applicationContext);
+        Assert.IsInstanceOfType(s, typeof(CustomFormatter));
       }
       finally
       {
-        Csla.Configuration.ConfigurationManager.AppSettings["CslaSerializationFormatter"] = "MobileFormatter";
+        // reset the serializer back to default
+        IServiceCollection services = new ServiceCollection();
+        services.AddCsla(o => o
+          .Serialization(o => o.SerializationFormatter(typeof(Csla.Serialization.Mobile.MobileFormatter))));
+        var provider = services.BuildServiceProvider();
+        var applicationContext = provider.GetRequiredService<ApplicationContext>();
       }
     }
+  }
+
+  public class CustomFormatter : Csla.Serialization.ISerializationFormatter
+  {
+    public object Deserialize(Stream serializationStream) => throw new NotImplementedException();
+    public object Deserialize(byte[] serializationStream) => throw new NotImplementedException();
+    public void Serialize(Stream serializationStream, object graph) => throw new NotImplementedException();
+    public byte[] Serialize(object graph) => throw new NotImplementedException();
   }
 }

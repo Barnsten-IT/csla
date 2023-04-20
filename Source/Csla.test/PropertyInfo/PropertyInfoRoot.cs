@@ -14,26 +14,19 @@ namespace Csla.Test.PropertyInfo
   [Serializable()]
   public class PropertyInfoRoot : BusinessBase<PropertyInfoRoot>
   {
-    #region Constructor(s)
-
-    private PropertyInfoRoot()
-    {
-    }
-
-    #endregion
-
     #region Factory Methods
 
-    public static PropertyInfoRoot NewPropertyInfoRoot()
+    public static PropertyInfoRoot NewPropertyInfoRoot(IDataPortal<PropertyInfoRoot> dataPortal)
     {
-      return Csla.DataPortal.Create<PropertyInfoRoot>();
+      return dataPortal.Create();
     }
 
     #endregion
 
     #region DataPortal Methods
 
-    protected override void DataPortal_Create()
+    [Create]
+		protected void DataPortal_Create()
     {
     }
 

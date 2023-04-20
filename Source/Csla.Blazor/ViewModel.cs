@@ -8,8 +8,9 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
+using Csla.Reflection;
 using Csla.Rules;
 
 namespace Csla.Blazor
@@ -19,7 +20,19 @@ namespace Csla.Blazor
   /// </summary>
   public class ViewModel<T>
   {
-    private IDataPortal<T> DataPortal { get; set; }
+    /// <summary>
+    /// Gets the current ApplicationContext instance.
+    /// </summary>
+    protected ApplicationContext ApplicationContext { get; private set; }
+
+    /// <summary>
+    /// Creates an instance of the type.
+    /// </summary>
+    /// <param name="applicationContext"></param>
+    public ViewModel(ApplicationContext applicationContext)
+    {
+      ApplicationContext = applicationContext;
+    }
 
     /// <summary>
     /// Event raised after Model has been saved
@@ -46,6 +59,7 @@ namespace Csla.Blazor
     /// <param name="newValue">New Model value</param>
     protected virtual void OnModelChanging(T oldValue, T newValue)
     {
+      _info.Clear();
       if (oldValue is INotifyPropertyChanged oldObj)
         oldObj.PropertyChanged -= (s, e) => OnModelPropertyChanged(e.PropertyName);
       if (newValue is INotifyPropertyChanged newObj)
@@ -71,65 +85,30 @@ namespace Csla.Blazor
     }
 
     /// <summary>
-    /// Creates an instance of the type
-    /// </summary>
-    public ViewModel(IDataPortal<T> dataPortal)
-    {
-      DataPortal = dataPortal;
-    }
-
-    /// <summary>
     /// Refresh the Model
     /// </summary>
-    /// <param name="parameters">Parameters passed to data portal</param>
-    /// <returns></returns>
-    public async Task<T> RefreshAsync(params object[] parameters)
+    /// <param name="factory">Async data portal or factory method</param>
+    public async Task<T> RefreshAsync(Func<Task<T>> factory)
     {
       Exception = null;
+      ViewModelErrorText = null;
       try
       {
-        Model = await DoRefreshAsync(parameters);
+        Model = await factory();
       }
       catch (DataPortalException ex)
       {
         Model = default;
         Exception = ex;
         ViewModelErrorText = ex.BusinessExceptionMessage;
-        Console.Error.WriteLine(ex.ToString());
       }
       catch (Exception ex)
       {
         Model = default;
         Exception = ex;
         ViewModelErrorText = ex.Message;
-        Console.Error.WriteLine(ex.ToString());
       }
       return Model;
-    }
-
-    /// <summary>
-    /// Override to provide custom Model refresh behavior
-    /// </summary>
-    /// <param name="parameters">Parameters passed to data portal</param>
-    /// <returns></returns>
-    protected virtual async Task<T> DoRefreshAsync(params object[] parameters)
-    {
-      if (typeof(Core.IReadOnlyObject).IsAssignableFrom(typeof(T)) ||
-          typeof(Core.IReadOnlyCollection).IsAssignableFrom(typeof(T)) ||
-          typeof(Core.IEditableCollection).IsAssignableFrom(typeof(T)))
-      {
-        if (Server.DataPortal.GetCriteriaFromArray(parameters) is Server.EmptyCriteria)
-          return await DataPortal.FetchAsync();
-        else
-          return await DataPortal.FetchAsync(parameters);
-      }
-      else
-      {
-        if (Server.DataPortal.GetCriteriaFromArray(parameters) is Server.EmptyCriteria)
-          return await DataPortal.CreateAsync();
-        else
-          return await DataPortal.FetchAsync(parameters);
-      }
     }
 
     /// <summary>
@@ -139,6 +118,7 @@ namespace Csla.Blazor
     public async Task SaveAsync()
     {
       Exception = null;
+      ViewModelErrorText = null;
       if (Model is Core.ITrackStatus obj && !obj.IsSavable)
       {
         ViewModelErrorText = ModelErrorText;
@@ -149,11 +129,15 @@ namespace Csla.Blazor
         Model = await DoSaveAsync();
         Saved?.Invoke();
       }
+      catch (DataPortalException ex)
+      {
+        Exception = ex;
+        ViewModelErrorText = ex.BusinessExceptionMessage;
+      }
       catch (Exception ex)
       {
         Exception = ex;
         ViewModelErrorText = ex.Message;
-        Console.Error.WriteLine(ex.ToString());
       }
     }
 
@@ -167,7 +151,7 @@ namespace Csla.Blazor
       {
         var result = (T)await savable.SaveAsync();
         if (Model is Core.IEditableBusinessObject editable)
-          new Core.GraphMerger().MergeGraph(editable, (Core.IEditableBusinessObject)result);
+          new Core.GraphMerger(ApplicationContext).MergeGraph(editable, (Core.IEditableBusinessObject)result);
         else
           Model = result;
       }
@@ -187,11 +171,47 @@ namespace Csla.Blazor
         {
           OnModelChanging(_model, value);
           _model = value;
+          OnModelChanged();
         }
       }
     }
 
     private readonly Dictionary<string, object> _info = new Dictionary<string, object>();
+
+    /// <summary>
+    /// Get a PropertyInfo object for a property.
+    /// PropertyInfo provides access
+    /// to the metastate of the property.
+    /// </summary>
+    /// <param name="property">Property expression</param>
+    /// <returns></returns>
+    public IPropertyInfo GetPropertyInfo<P>(Expression<Func<P>> property)
+    {
+      if (property == null)
+        throw new ArgumentNullException(nameof(property));
+
+      var keyName = property.GetKey();
+      var identifier = Microsoft.AspNetCore.Components.Forms.FieldIdentifier.Create(property);
+      return GetPropertyInfo(keyName, identifier.Model, identifier.FieldName);
+    }
+
+    /// <summary>
+    /// Get a PropertyInfo object for a property.
+    /// PropertyInfo provides access
+    /// to the metastate of the property.
+    /// </summary>
+    /// <param name="property">Property expression</param>
+    /// <param name="id">Unique identifier for property in list or array</param>
+    /// <returns></returns>
+    public IPropertyInfo GetPropertyInfo<P>(Expression<Func<P>> property, string id)
+    {
+      if (property == null)
+        throw new ArgumentNullException(nameof(property));
+
+      var keyName = property.GetKey() + $"[{id}]";
+      var identifier = Microsoft.AspNetCore.Components.Forms.FieldIdentifier.Create(property);
+      return GetPropertyInfo(keyName, identifier.Model, identifier.FieldName);
+    }
 
     /// <summary>
     /// Get a PropertyInfo object for a property
@@ -202,15 +222,35 @@ namespace Csla.Blazor
     /// <returns></returns>
     public IPropertyInfo GetPropertyInfo(string propertyName)
     {
+      var keyName = Model.GetType().FullName + "." + propertyName;
+      return GetPropertyInfo(keyName, Model, propertyName);
+    }
+
+    /// <summary>
+    /// Get a PropertyInfo object for a property
+    /// of the Model. PropertyInfo provides access
+    /// to the metastate of the property.
+    /// </summary>
+    /// <param name="propertyName">Property name</param>
+    /// <param name="id">Unique identifier for property in list or array</param>
+    /// <returns></returns>
+    public IPropertyInfo GetPropertyInfo(string propertyName, string id)
+    {
+      var keyName = Model.GetType().FullName + "." + propertyName + $"[{id}]";
+      return GetPropertyInfo(keyName, Model, propertyName);
+    }
+
+    private IPropertyInfo GetPropertyInfo(string keyName, object model, string propertyName)
+    {
       PropertyInfo result;
-      if (_info.TryGetValue(propertyName, out object temp))
+      if (_info.TryGetValue(keyName, out object temp))
       {
         result = (PropertyInfo)temp;
       }
       else
       {
-        result = new PropertyInfo(Model, propertyName);
-        _info.Add(propertyName, result);
+        result = new PropertyInfo(model, propertyName);
+        _info.Add(keyName, result);
       }
       return result;
     }
@@ -249,9 +289,9 @@ namespace Csla.Blazor
     /// business domain type
     /// </summary>
     /// <returns></returns>
-    public static bool CanCreateObject()
+    public bool CanCreateObject()
     {
-      return BusinessRules.HasPermission(AuthorizationActions.CreateObject, typeof(T));
+      return BusinessRules.HasPermission(ApplicationContext, AuthorizationActions.CreateObject, typeof(T));
     }
 
     /// <summary>
@@ -260,9 +300,9 @@ namespace Csla.Blazor
     /// business domain type
     /// </summary>
     /// <returns></returns>
-    public static bool CanGetObject()
+    public bool CanGetObject()
     {
-      return BusinessRules.HasPermission(AuthorizationActions.GetObject, typeof(T));
+      return BusinessRules.HasPermission(ApplicationContext, AuthorizationActions.GetObject, typeof(T));
     }
 
     /// <summary>
@@ -271,9 +311,9 @@ namespace Csla.Blazor
     /// business domain type
     /// </summary>
     /// <returns></returns>
-    public static bool CanEditObject()
+    public bool CanEditObject()
     {
-      return BusinessRules.HasPermission(AuthorizationActions.EditObject, typeof(T));
+      return BusinessRules.HasPermission(ApplicationContext, AuthorizationActions.EditObject, typeof(T));
     }
 
     /// <summary>
@@ -282,9 +322,9 @@ namespace Csla.Blazor
     /// business domain type
     /// </summary>
     /// <returns></returns>
-    public static bool CanDeleteObject()
+    public bool CanDeleteObject()
     {
-      return BusinessRules.HasPermission(AuthorizationActions.DeleteObject, typeof(T));
+      return BusinessRules.HasPermission(ApplicationContext, AuthorizationActions.DeleteObject, typeof(T));
     }
   }
 }

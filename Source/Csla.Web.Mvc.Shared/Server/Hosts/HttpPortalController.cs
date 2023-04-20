@@ -1,5 +1,4 @@
-﻿#if !NET40
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="HttpPortalController.cs" company="Marimer LLC">
 //     Copyright (c) Marimer LLC. All rights reserved.
 //     Website: https://cslanet.com
@@ -10,15 +9,16 @@ using Csla.Serialization.Mobile;
 using System;
 using System.IO;
 using System.Threading.Tasks;
-using Csla.Server.Hosts.HttpChannel;
-#if MVC4
-using System.Web.Mvc;
-#endif
 using System.Net.Http;
-#if NETSTANDARD2_0 || NETCORE3_0 || NETCORE3_1
+using Csla.Serialization;
+using Csla.Server.Hosts.DataPortalChannel;
+
+#if NETSTANDARD2_0 || NET5_0_OR_GREATER || NETCOREAPP3_1
+
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
+
 #else
 using System.Web.Http;
 #endif
@@ -29,9 +29,21 @@ namespace Csla.Server.Hosts
   /// Exposes server-side DataPortal functionality
   /// through HTTP request/response.
   /// </summary>
-#if NETSTANDARD2_0 || NETCORE3_0 || NETCORE3_1
+#if NETSTANDARD2_0 || NET5_0_OR_GREATER || NETCOREAPP3_1
+
   public class HttpPortalController : Controller
   {
+    private ApplicationContext ApplicationContext { get; set; }
+
+    /// <summary>
+    /// Creates an instance of the type.
+    /// </summary>
+    /// <param name="applicationContext">ApplicationContext instance.</param>
+    public HttpPortalController(ApplicationContext applicationContext)
+    {
+      ApplicationContext = applicationContext;
+    }
+
     /// <summary>
     /// Gets or sets a value indicating whether to use
     /// text/string serialization instead of the default
@@ -45,7 +57,7 @@ namespace Csla.Server.Hosts
     /// <param name="operation">Name of the data portal operation to perform.</param>
     /// <returns>Results from the server-side data portal.</returns>
     [HttpPost]
-    public virtual async Task PostAsync([FromQuery]string operation)
+    public virtual async Task PostAsync([FromQuery] string operation)
     {
       if (operation.Contains("/"))
       {
@@ -61,13 +73,15 @@ namespace Csla.Server.Hosts
       }
     }
 
+    private static Dictionary<string, string> routingTagUrls = new Dictionary<string, string>();
+    private static HttpClient _client;
+
     /// <summary>
     /// Gets a dictionary containing the URLs for each
-    /// data portal route, where each key is the 
+    /// data portal route, where each key is the
     /// routing tag identifying the route URL.
     /// </summary>
-    protected static Dictionary<string, string> RoutingTagUrls = new Dictionary<string, string>();
-    private static HttpClient _client;
+    protected static Dictionary<string, string> RoutingTagUrls { get => routingTagUrls; set => routingTagUrls = value; }
 
     /// <summary>
     /// Gets or sets the HttpClient timeout
@@ -116,25 +130,20 @@ namespace Csla.Server.Hosts
         await PostAsync(operation).ConfigureAwait(false);
       }
     }
-#elif MVC4
-  public class HttpPortalController : Controller
-  {
-    /// <summary>
-    /// Entry point for all data portal operations.
-    /// </summary>
-    /// <param name="operation">Name of the data portal operation to perform.</param>
-    /// <returns>Results from the server-side data portal.</returns>
-    [HttpPost]
-    public virtual async Task<ActionResult> PostAsync(string operation)
-    {
-      var requestData = Request.BinaryRead(Request.TotalBytes);
-      var responseData = await InvokePortal(operation, requestData).ConfigureAwait(false);
-      Response.BinaryWrite(responseData);
-      return new EmptyResult();
-    }
-#else
+#else // NET462 and MVC5
   public class HttpPortalController : ApiController
   {
+    private ApplicationContext ApplicationContext { get; set; }
+
+    /// <summary>
+    /// Creates an instance of the type.
+    /// </summary>
+    /// <param name="applicationContext">ApplicationContext instance.</param>
+    public HttpPortalController(ApplicationContext applicationContext)
+    {
+      ApplicationContext = applicationContext;
+    }
+
     /// <summary>
     /// Entry point for all data portal operations.
     /// </summary>
@@ -151,6 +160,7 @@ namespace Csla.Server.Hosts
 #endif
 
     private HttpPortal _portal;
+
     /// <summary>
     /// Gets or sets the HttpPortal implementation
     /// used to coordinate the data portal
@@ -161,28 +171,54 @@ namespace Csla.Server.Hosts
       get
       {
         if (_portal == null)
-          _portal = new HttpPortal();
+          _portal = ApplicationContext.CreateInstanceDI<HttpPortal>();
         return _portal;
       }
       set { _portal = value; }
     }
 
-#if NETSTANDARD2_0 || NETCORE3_0 || NETCORE3_1
+#if NETSTANDARD2_0 || NET5_0_OR_GREATER || NETCOREAPP3_1
+
+    /// <summary>
+    /// Override to add elements to the HttpReponse
+    /// headers.
+    /// </summary>
+    /// <param name="response">HttpResponse instance</param>
+    /// <remarks>
+    /// For example, you may allow compressed payloads:
+    /// response.Headers.Add("Accept-Encoding", "gzip,deflate");
+    /// </remarks>
+    protected virtual void SetHttpResponseHeaders(Microsoft.AspNetCore.Http.HttpResponse response)
+    { }
+
     private async Task InvokePortal(string operation, Stream requestStream, Stream responseStream)
     {
-      var serializer = new MobileFormatter();
-      var result = new HttpResponse();
-      HttpErrorInfo errorData = null;
+      var serializer = SerializationFormatterFactory.GetFormatter(ApplicationContext);
+      var result = ApplicationContext.CreateInstanceDI<DataPortalResponse>();
+      DataPortalErrorInfo errorData = null;
+      if (UseTextSerialization)
+      {
+        Response.Headers.Add("Content-type", "application/base64,text/plain");
+      }
+      else
+      {
+        Response.Headers.Add("Content-type", "application/octet-stream");
+      }
+      SetHttpResponseHeaders(Response);
       try
       {
         var request = serializer.Deserialize(requestStream);
         result = await CallPortal(operation, request);
       }
+#pragma warning disable CA1031 // Do not catch general exception types
       catch (Exception ex)
       {
-        errorData = new HttpErrorInfo(ex);
+        errorData = ApplicationContext.CreateInstance<DataPortalErrorInfo>(ApplicationContext, ex);
       }
-      var portalResult = new HttpResponse { ErrorData = errorData, GlobalContext = result.GlobalContext, ObjectData = result.ObjectData };
+#pragma warning restore CA1031 // Do not catch general exception types
+      var portalResult = ApplicationContext.CreateInstanceDI<DataPortalResponse>();
+      portalResult.ErrorData = errorData;
+      portalResult.ObjectData = result.ObjectData;
       serializer.Serialize(responseStream, portalResult);
     }
 
@@ -194,74 +230,74 @@ namespace Csla.Server.Hosts
       var requestArray = System.Convert.FromBase64String(requestString);
       var requestBuffer = new MemoryStream(requestArray);
 
-      var serializer = new MobileFormatter();
-      var result = new HttpResponse();
-      HttpErrorInfo errorData = null;
+      var serializer = SerializationFormatterFactory.GetFormatter(ApplicationContext);
+      var result = ApplicationContext.CreateInstanceDI<DataPortalResponse>();
+      DataPortalErrorInfo errorData = null;
       try
       {
         var request = serializer.Deserialize(requestBuffer);
         result = await CallPortal(operation, request);
       }
+#pragma warning disable CA1031 // Do not catch general exception types
       catch (Exception ex)
       {
-        errorData = new HttpErrorInfo(ex);
+        errorData = ApplicationContext.CreateInstance<DataPortalErrorInfo>(ApplicationContext, ex);
       }
-      var portalResult = new HttpResponse { ErrorData = errorData, GlobalContext = result.GlobalContext, ObjectData = result.ObjectData };
+#pragma warning restore CA1031 // Do not catch general exception types
+      var portalResult = ApplicationContext.CreateInstanceDI<DataPortalResponse>();
+      portalResult.ErrorData = errorData;
+      portalResult.ObjectData = result.ObjectData;
 
       var responseBuffer = new MemoryStream();
       serializer.Serialize(responseBuffer, portalResult);
       responseBuffer.Position = 0;
-      using (var writer = new StreamWriter(responseStream))
+      using var writer = new StreamWriter(responseStream)
       {
-        writer.AutoFlush = true;
-        await writer.WriteAsync(System.Convert.ToBase64String(responseBuffer.ToArray()));
-      }
+        AutoFlush = true
+      };
+      await writer.WriteAsync(System.Convert.ToBase64String(responseBuffer.ToArray()));
     }
+
 #else
     private async Task<byte[]> InvokePortal(string operation, byte[] data)
     {
-      var result = new HttpResponse();
-      HttpErrorInfo errorData = null;
+      var result = ApplicationContext.CreateInstance<DataPortalResponse>();
+      DataPortalErrorInfo errorData = null;
       try
       {
-        var buffer = new MemoryStream(data);
-        buffer.Position = 0;
-        var request = MobileFormatter.Deserialize(buffer.ToArray());
+        var buffer = new MemoryStream(data)
+        {
+          Position = 0
+        };
+        var request = SerializationFormatterFactory.GetFormatter(ApplicationContext).Deserialize(buffer.ToArray());
         result = await CallPortal(operation, request);
       }
+#pragma warning disable CA1031 // Do not catch general exception types
       catch (Exception ex)
       {
-        errorData = new HttpErrorInfo(ex);
+        errorData = ApplicationContext.CreateInstance<DataPortalErrorInfo>(ApplicationContext, ex);
       }
-      var portalResult = new HttpResponse { ErrorData = errorData, GlobalContext = result.GlobalContext, ObjectData = result.ObjectData };
-      var bytes = MobileFormatter.Serialize(portalResult);
+#pragma warning restore CA1031 // Do not catch general exception types
+      var portalResult = ApplicationContext.CreateInstance<DataPortalResponse>();
+      portalResult.ErrorData = errorData;
+      portalResult.ObjectData = result.ObjectData;
+      var bytes = SerializationFormatterFactory.GetFormatter(ApplicationContext).Serialize(portalResult);
       return bytes;
     }
 #endif
 
-    private async Task<HttpResponse> CallPortal(string operation, object request)
+    private async Task<DataPortalResponse> CallPortal(string operation, object request)
     {
-      HttpResponse result = null;
       var portal = Portal;
-      switch (operation)
+      DataPortalResponse result = operation switch
       {
-        case "create":
-          result = await portal.Create((CriteriaRequest)request).ConfigureAwait(false);
-          break;
-        case "fetch":
-          result = await portal.Fetch((CriteriaRequest)request).ConfigureAwait(false);
-          break;
-        case "update":
-          result = await portal.Update((UpdateRequest)request).ConfigureAwait(false);
-          break;
-        case "delete":
-          result = await portal.Delete((CriteriaRequest)request).ConfigureAwait(false);
-          break;
-        default:
-          throw new InvalidOperationException(operation);
-      }
+        "create" => await portal.Create((CriteriaRequest)request).ConfigureAwait(false),
+        "fetch" => await portal.Fetch((CriteriaRequest)request).ConfigureAwait(false),
+        "update" => await portal.Update((UpdateRequest)request).ConfigureAwait(false),
+        "delete" => await portal.Delete((CriteriaRequest)request).ConfigureAwait(false),
+        _ => throw new InvalidOperationException(operation),
+      };
       return result;
     }
   }
 }
-#endif

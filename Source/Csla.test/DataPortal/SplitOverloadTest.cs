@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Csla;
+using Csla.TestHelpers;
 
 #if !NUNIT
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -22,33 +23,55 @@ using TestMethod = NUnit.Framework.TestAttribute;
 
 namespace Csla.Test.DataPortalTest
 {
-    [TestClass]
-    public class SplitOverloadTest
-    {
-        [TestMethod]
-        public void TestDpCreate()
-        {
-            SplitOverload test = SplitOverload.NewObject();
-            Assert.AreEqual("Created", ApplicationContext.GlobalContext["SplitOverload"]);
-        }
-        [TestMethod]
-        public void TestDpCreateWithCriteria()
-        {
-            SplitOverload test = SplitOverload.NewObjectWithCriteria();
-            Assert.AreEqual("Created1", ApplicationContext.GlobalContext["SplitOverload"]);
-        }
-        [TestMethod]
-        public void TestDpFetch()
-        {
-            SplitOverload test = SplitOverload.GetObject(5);
-            Assert.AreEqual("Fetched", ApplicationContext.GlobalContext["SplitOverload"]);
-        }
-        [TestMethod]
-        public void TestDpDelete()
-        {
-            SplitOverload.DeleteObject(5);
-            Assert.AreEqual("Deleted", ApplicationContext.GlobalContext["SplitOverload"]);
-        }
+  [TestClass]
+  public class SplitOverloadTest
+  {
+    private static TestDIContext _testDIContext;
 
+    [ClassInitialize]
+    public static void ClassInitialize(TestContext context)
+    {
+      _testDIContext = TestDIContextFactory.CreateDefaultContext();
     }
+
+    [TestInitialize]
+    public void Initialize()
+    {
+      TestResults.Reinitialise();
+    }
+
+    [TestMethod]
+    public void TestDpCreate()
+    {
+      IDataPortal<SplitOverload> dataPortal = _testDIContext.CreateDataPortal<SplitOverload>();
+
+      SplitOverload test = SplitOverload.NewObject(dataPortal);
+      Assert.AreEqual("Created", TestResults.GetResult("SplitOverload"));
+    }
+    [TestMethod]
+    public void TestDpCreateWithCriteria()
+    {
+      IDataPortal<SplitOverload> dataPortal = _testDIContext.CreateDataPortal<SplitOverload>();
+
+      SplitOverload test = SplitOverload.NewObjectWithCriteria(dataPortal);
+      Assert.AreEqual("Created1", TestResults.GetResult("SplitOverload"));
+    }
+    [TestMethod]
+    public void TestDpFetch()
+    {
+      IDataPortal<SplitOverload> dataPortal = _testDIContext.CreateDataPortal<SplitOverload>();
+
+      SplitOverload test = SplitOverload.GetObject(5, dataPortal);
+      Assert.AreEqual("Fetched", TestResults.GetResult("SplitOverload"));
+    }
+    [TestMethod]
+    public void TestDpDelete()
+    {
+      IDataPortal<SplitOverload> dataPortal = _testDIContext.CreateDataPortal<SplitOverload>();
+
+      SplitOverload.DeleteObject(5, dataPortal);
+      Assert.AreEqual("Deleted", TestResults.GetResult("SplitOverload"));
+    }
+
+  }
 }

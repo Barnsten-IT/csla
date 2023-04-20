@@ -40,9 +40,6 @@ namespace cslalighttest.ViewModelTests
       return Csla.DataPortal.FetchChild<TestChild>(childData);
     }
 
-    public TestChild()
-    { /* Require use of factory methods */ }
-
     #endregion
 
     #region Data Access
@@ -70,7 +67,7 @@ namespace cslalighttest.ViewModelTests
     }
 
     [RunLocal]
-    private void Child_DeleteSelf(object parent)
+    private void Child_DeleteSelf()
     {
     }
 

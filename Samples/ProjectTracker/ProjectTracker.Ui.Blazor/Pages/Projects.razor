@@ -6,7 +6,6 @@
 <h1>Projects</h1>
 
 <p class="text-danger">@vm.ViewModelErrorText</p>
-<p class="text-danger">@ErrorText</p>
 
 @if (vm.Model == null)
 {
@@ -55,19 +54,11 @@ else
 }
 
 @code {
-  private string ErrorText;
   private int itemSelectedForDeletion = -1;
 
   protected override async Task OnParametersSetAsync()
   {
-    try
-    {
-      await vm.RefreshAsync();
-    }
-    catch (Exception ex)
-    {
-      ErrorText = ex.ToString();
-    }
+    await vm.RefreshAsync(() => Csla.DataPortal.FetchAsync<ProjectTracker.Library.ProjectList>());
   }
 
   private void SelectForDelete(int id)
@@ -80,7 +71,8 @@ else
     itemSelectedForDeletion = -1;
     vm.Model = null;
     await ProjectTracker.Library.ProjectEdit.DeleteProjectAsync(id);
-    await vm.RefreshAsync();
+    await vm.RefreshAsync(() => 
+      Csla.DataPortal.FetchAsync<ProjectTracker.Library.ProjectList>());
     StateHasChanged();
   }
 }

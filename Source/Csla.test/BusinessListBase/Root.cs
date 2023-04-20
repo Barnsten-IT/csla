@@ -31,25 +31,29 @@ namespace Csla.Test.BusinessListBase
       private set { LoadProperty(ChildrenProperty, value); }
     }
 
-    protected override void DataPortal_Create()
+    [Create]
+	protected void DataPortal_Create([Inject] IChildDataPortal<ChildList> childDataPortal)
     {
-      Children = Csla.DataPortal.CreateChild<ChildList>();
-      base.DataPortal_Create();
+      Children = childDataPortal.CreateChild();
+      BusinessRules.CheckRules();
     }
 
-    protected override void DataPortal_Insert()
+    [Insert]
+    protected void DataPortal_Insert()
     {
       FieldManager.UpdateChildren();
     }
 
-    protected override void DataPortal_Update()
+    [Update]
+		protected void DataPortal_Update()
     {
       FieldManager.UpdateChildren();
     }
 
-    protected override void DataPortal_DeleteSelf()
+    [DeleteSelf]
+    protected void DataPortal_DeleteSelf([Inject] IChildDataPortal<ChildList> childDataPortal)
     {
-      Children = Csla.DataPortal.CreateChild<ChildList>();
+      Children = childDataPortal.CreateChild();
     }
   }
 }

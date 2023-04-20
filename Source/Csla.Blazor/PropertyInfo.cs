@@ -15,14 +15,12 @@ namespace Csla.Blazor
   /// </summary>
   public class PropertyInfo : IPropertyInfo, INotifyPropertyChanged
   {
+    private const string TextSeparator = ", ";
+    
     /// <summary>
     /// Gets the model
     /// </summary>
     protected object Model { get; }
-    /// <summary>
-    /// Gets the property name
-    /// </summary>
-    protected string PropertyName { get; }
 
     /// <summary>
     /// Creates an instance of the type.
@@ -84,6 +82,11 @@ namespace Csla.Blazor
     }
 
     /// <summary>
+    /// Gets the property name for the property.
+    /// </summary>
+    public string PropertyName { get; }
+
+    /// <summary>
     /// Gets the validation error messages for a
     /// property on the Model
     /// </summary>
@@ -94,7 +97,7 @@ namespace Csla.Blazor
       {
         var result = string.Empty;
         if (Model is Core.BusinessBase obj)
-          result = obj.BrokenRulesCollection.ToString(",", RuleSeverity.Error, PropertyName);
+          result = obj.BrokenRulesCollection.ToString(TextSeparator, RuleSeverity.Error, PropertyName);
         return result;
       }
     }
@@ -110,7 +113,7 @@ namespace Csla.Blazor
       {
         var result = string.Empty;
         if (Model is Core.BusinessBase obj)
-          result = obj.BrokenRulesCollection.ToString(",", RuleSeverity.Warning, PropertyName);
+          result = obj.BrokenRulesCollection.ToString(TextSeparator, RuleSeverity.Warning, PropertyName);
         return result;
       }
     }
@@ -126,7 +129,7 @@ namespace Csla.Blazor
       {
         var result = string.Empty;
         if (Model is Core.BusinessBase obj)
-          result = obj.BrokenRulesCollection.ToString(",", RuleSeverity.Information, PropertyName);
+          result = obj.BrokenRulesCollection.ToString(TextSeparator, RuleSeverity.Information, PropertyName);
         return result;
       }
     }
@@ -188,5 +191,13 @@ namespace Csla.Blazor
     {
       PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
+
+    /// <summary>
+    /// Gets the System.Reflection.PropertyInfo object
+    /// representing the property.
+    /// </summary>
+    /// <returns></returns>
+    public System.Reflection.PropertyInfo GetPropertyInfo() 
+      => Model.GetType().GetProperty(PropertyName);
   }
 }

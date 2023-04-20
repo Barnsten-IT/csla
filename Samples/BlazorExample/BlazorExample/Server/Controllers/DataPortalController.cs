@@ -1,5 +1,4 @@
-﻿using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 
 namespace BlazorExample.Server.Controllers
 {
@@ -7,10 +6,8 @@ namespace BlazorExample.Server.Controllers
   [ApiController]
   public class DataPortalController : Csla.Server.Hosts.HttpPortalController
   {
-    public DataPortalController()
-    {
-      UseTextSerialization = true;
-    }
+    public DataPortalController(Csla.ApplicationContext applicationContext)
+      : base(applicationContext) { }
 
     [HttpGet]
     public string Get()
@@ -20,7 +17,8 @@ namespace BlazorExample.Server.Controllers
 
     public override Task PostAsync([FromQuery] string operation)
     {
-      return base.PostAsync(operation);
+      var result = base.PostAsync(operation);
+      return result;
     }
   }
 }

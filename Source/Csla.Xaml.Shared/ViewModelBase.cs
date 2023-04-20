@@ -7,23 +7,20 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
-using System.Linq.Expressions;
 using System.Threading.Tasks;
 using System.Windows;
 using Csla.Core;
-using Csla.Reflection;
 using Csla.Rules;
 #if WINDOWS_UWP
 using Windows.UI.Xaml;
 #endif
 
-#if ANDROID
+#if ANDROID && !MAUI
 namespace Csla.Axml
-#elif IOS
+#elif IOS && !MAUI
 namespace Csla.Iosui
 #else
 namespace Csla.Xaml
@@ -34,425 +31,16 @@ namespace Csla.Xaml
   /// implement their own commands/verbs/actions.
   /// </summary>
   /// <typeparam name="T">Type of the Model object.</typeparam>
-#if ANDROID || IOS || XAMARIN
-    public abstract class ViewModelBase<T> : INotifyPropertyChanged, IViewModel
+#if ANDROID || IOS || XAMARIN || MAUI
+  public abstract class ViewModelBase<T> : INotifyPropertyChanged, IViewModel
 #else
   public abstract class ViewModelBase<T> : DependencyObject,
     INotifyPropertyChanged, IViewModel
 #endif
   {
-    /// <summary>
-    /// Create new instance of base class used to create ViewModel objects that
-    /// implement their own commands/verbs/actions.
-    /// </summary>
-    protected ViewModelBase()
-    {
-      SetPropertiesAtObjectLevel();
-    }
+    private ApplicationContext ApplicationContext { get => Csla.Xaml.ApplicationContextManager.GetApplicationContext(); }
 
-#region Obsolete Code
-
-    /// <summary>
-    /// Method used to perform async initialization of the
-    /// viewmodel. This method is usually invoked immediately
-    /// following construction of the object instance.
-    /// </summary>
-    /// <returns></returns>
-    [Obsolete("Use RefreshAsync", false)]
-    public async Task<ViewModelBase<T>> InitAsync()
-    {
-      try
-      {
-        IsBusy = true;
-        Model = await DoInitAsync();
-        IsBusy = false;
-      }
-#pragma warning disable CA1031 // Do not catch general exception types
-      catch (Exception ex)
-      {
-        IsBusy = false;
-        this.Error = ex;
-      }
-#pragma warning restore CA1031 // Do not catch general exception types
-      return this;
-    }
-
-#pragma warning disable 1998
-    /// <summary>
-    /// Override this method to implement async initialization of
-    /// the model object. The result of this method is used
-    /// to set the Model property of the viewmodel.
-    /// </summary>
-    /// <returns>A Task that creates the model object.</returns>
-    [Obsolete("Use RefreshAsync", false)]
-    protected async virtual Task<T> DoInitAsync()
-    {
-      throw new NotImplementedException("DoInitAsync");
-    }
-#pragma warning restore 1998
-
-    private Exception _error;
-
-    /// <summary>
-    /// Gets the Error object corresponding to the
-    /// last asynchronous operation.
-    /// </summary>
-    [Browsable(false)]
-    [Display(AutoGenerateField = false)]
-    [ScaffoldColumn(false)]
-    [Obsolete("Use RefreshAsync/SaveAsync", false)]
-    public Exception Error
-    {
-      get { return _error; }
-      protected set
-      {
-        if (!ReferenceEquals(_error, value))
-        {
-          _error = value;
-          OnPropertyChanged(nameof(Error));
-          if (_error != null)
-            OnError(_error);
-        }
-      }
-    }
-
-    /// <summary>
-    /// Event raised when an error occurs during processing.
-    /// </summary>
-    [Obsolete("Use RefreshAsync/SaveAsync", false)]
-    public event EventHandler<ErrorEventArgs> ErrorOccurred;
-
-    /// <summary>
-    /// Raises ErrorOccurred event when an error occurs
-    /// during processing.
-    /// </summary>
-    /// <param name="error"></param>
-    [Obsolete("Use RefreshAsync/SaveAsync", false)]
-    protected virtual void OnError(Exception error)
-    {
-#if ANDROID || IOS
-      ErrorOccurred?.Invoke(this, new ErrorEventArgs(this, error));
-#else
-      ErrorOccurred?.Invoke(this, new ErrorEventArgs { Error = error });
-#endif
-    }
-
-#if !(ANDROID || IOS)
-    /// <summary>
-    /// Creates or retrieves a new instance of the 
-    /// Model by invoking a static factory method.
-    /// </summary>
-    /// <param name="factoryMethod">Static factory method function.</param>
-    /// <example>DoRefresh(BusinessList.GetList)</example>
-    /// <example>DoRefresh(() => BusinessList.GetList())</example>
-    /// <example>DoRefresh(() => BusinessList.GetList(id))</example>
-    [Obsolete("Use RefreshAsync", false)]
-    protected virtual void DoRefresh(Func<T> factoryMethod)
-    {
-      if (typeof(T) != null)
-      {
-        OnRefreshing(Model);
-        Error = null;
-        try
-        {
-          Model = factoryMethod.Invoke();
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-        catch (Exception ex)
-        {
-          Error = ex;
-        }
-#pragma warning restore CA1031 // Do not catch general exception types
-        OnRefreshed();
-      }
-    }
-
-    /// <summary>
-    /// Creates or retrieves a new instance of the 
-    /// Model by invoking a static factory method.
-    /// </summary>
-    /// <param name="factoryMethod">Name of the static factory method.</param>
-    /// <param name="factoryParameters">Factory method parameters.</param>
-    [Obsolete("Use RefreshAsync", false)]
-    protected virtual void DoRefresh(string factoryMethod, params object[] factoryParameters)
-    {
-      if (typeof(T) != null)
-      {
-        OnRefreshing(Model);
-        Error = null;
-        try
-        {
-          Model = (T)MethodCaller.CallFactoryMethod(typeof(T), factoryMethod, factoryParameters);
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-        catch (Exception ex)
-        {
-          Error = ex;
-        }
-#pragma warning restore CA1031 // Do not catch general exception types
-        OnRefreshed();
-      }
-    }
-
-    /// <summary>
-    /// Creates or retrieves a new instance of the 
-    /// Model by invoking a static factory method.
-    /// </summary>
-    /// <param name="factoryMethod">Name of the static factory method.</param>
-    [Obsolete("Use RefreshAsync", false)]
-    protected virtual void DoRefresh(string factoryMethod)
-    {
-#if NET40 || NET45
-      DoRefresh(factoryMethod, new object[] { });
-#else
-      DoRefresh(factoryMethod, Array.Empty<object>());
-#endif
-    }
-#endif
-
-      /// <summary>
-      /// Creates or retrieves a new instance of the 
-      /// Model by invoking a static factory method.
-      /// </summary>
-      /// <param name="factoryMethod">Static factory method action.</param>
-      /// <example>BeginRefresh(BusinessList.BeginGetList)</example>
-      /// <example>BeginRefresh(handler => BusinessList.BeginGetList(handler))</example>
-      /// <example>BeginRefresh(handler => BusinessList.BeginGetList(id, handler))</example>
-    [Obsolete("Use RefreshAsync", false)]
-    protected virtual void BeginRefresh(Action<EventHandler<DataPortalResult<T>>> factoryMethod)
-    {
-      if (typeof(T) != null)
-        try
-        {
-          Error = null;
-          IsBusy = true;
-
-          var handler = (EventHandler<DataPortalResult<T>>)CreateHandler(typeof(T));
-          factoryMethod(handler);
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-        catch (Exception ex)
-        {
-          Error = ex;
-          IsBusy = false;
-        }
-#pragma warning restore CA1031 // Do not catch general exception types
-    }
-
-    /// <summary>
-    /// Creates or retrieves a new instance of the 
-    /// Model by invoking a static factory method.
-    /// </summary>
-    /// <param name="factoryMethod">Name of the static factory method.</param>
-    /// <param name="factoryParameters">Factory method parameters.</param>
-    [Obsolete("Use RefreshAsync", false)]
-    protected virtual void BeginRefresh(string factoryMethod, params object[] factoryParameters)
-    {
-      if (typeof(T) != null)
-        try
-        {
-          Error = null;
-          IsBusy = true;
-          var parameters = new List<object>(factoryParameters)
-          {
-            CreateHandler(typeof(T))
-          };
-
-          MethodCaller.CallFactoryMethod(typeof(T), factoryMethod, parameters.ToArray());
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-        catch (Exception ex)
-        {
-          Error = ex;
-          IsBusy = false;
-        }
-#pragma warning restore CA1031 // Do not catch general exception types
-    }
-
-    /// <summary>
-    /// Creates or retrieves a new instance of the 
-    /// Model by invoking a static factory method.
-    /// </summary>
-    /// <param name="factoryMethod">Name of the static factory method.</param>
-    [Obsolete("Use RefreshAsync", false)]
-    protected virtual void BeginRefresh(string factoryMethod)
-    {
-#if NET40 || NET45
-      BeginRefresh(factoryMethod, new object[] { });
-#else
-      BeginRefresh(factoryMethod, Array.Empty<object>());
-#endif
-    }
-
-    private Delegate CreateHandler(Type objectType)
-    {
-      System.Reflection.MethodInfo method = MethodCaller.GetMethod(GetType(), "QueryCompleted");
-      var innerType = typeof(DataPortalResult<>).MakeGenericType(objectType);
-      var args = typeof(EventHandler<>).MakeGenericType(innerType);
-
-#if XAMARIN
-      var target = Expression.Constant(this);
-      var p1 = new ParameterExpression[] { Expression.Parameter(typeof(object), "sender"), Expression.Parameter(typeof(EventArgs), "args") };
-      var call = Expression.Call(target, method, p1);
-      var lambda = Expression.Lambda(args, call, "QueryCompleted", p1);
-      var handler = lambda.Compile();
-#else
-      Delegate handler = Delegate.CreateDelegate(args, this, method);
-#endif
-      return handler;
-    }
-
-    [Obsolete("Use RefreshAsync", false)]
-    private void QueryCompleted(object sender, EventArgs e)
-    {
-      try
-      {
-        var eventArgs = (IDataPortalResult)e;
-        if (eventArgs.Error == null)
-        {
-          var model = (T)eventArgs.Object;
-          OnRefreshing(model);
-          Model = model;
-        }
-        else
-          Error = eventArgs.Error;
-        OnRefreshed();
-      }
-      finally
-      {
-        IsBusy = false;
-      }
-    }
-
-    /// <summary>
-    /// Method called after a refresh operation 
-    /// has completed and before the model is updated.
-    /// </summary>
-    /// <param name="model">The model.</param>
-    [Obsolete("Use RefreshAsync", false)]
-    protected virtual void OnRefreshing(T model)
-    { }
-
-    /// <summary>
-    /// Method called after a refresh operation 
-    /// has completed.
-    /// </summary>
-    [Obsolete("Use RefreshAsync", false)]
-    protected virtual void OnRefreshed()
-    { }
-
-#if !(ANDROID || IOS) && !XAMARIN
-    /// <summary>
-    /// Saves the Model, first committing changes
-    /// if ManagedObjectLifetime is true.
-    /// </summary>
-    [Obsolete("Use SaveAsync", false)]
-    protected virtual T DoSave()
-    {
-      T result = (T)Model;
-      Error = null;
-      try
-      {
-        UnhookChangedEvents(Model);
-        var savable = Model as Csla.Core.ISavable;
-        if (ManageObjectLifetime)
-        {
-          // clone the object if possible
-          if (Model is ICloneable clonable)
-            savable = (Csla.Core.ISavable)clonable.Clone();
-
-          //apply changes
-          if (savable is Csla.Core.ISupportUndo undoable)
-            undoable.ApplyEdit();
-        }
-
-        result = (T)savable.Save();
-
-        Model = result;
-        OnSaved();
-      }
-      catch (Exception ex)
-      {
-        HookChangedEvents(Model);
-        Error = ex;
-        OnSaved();
-      }
-      return result;
-    }
-#endif
-
-    /// <summary>
-    /// Saves the Model, first committing changes
-    /// if ManagedObjectLifetime is true.
-    /// </summary>
-    [Obsolete("Use SaveAsync", false)]
-    protected virtual void BeginSave()
-    {
-      try
-      {
-        var savable = Model as Csla.Core.ISavable;
-        if (ManageObjectLifetime)
-        {
-          // clone the object if possible
-          if (Model is ICloneable clonable)
-            savable = (Csla.Core.ISavable)clonable.Clone();
-
-          //apply changes
-          if (savable is Csla.Core.ISupportUndo undoable)
-            undoable.ApplyEdit();
-        }
-
-        savable.Saved += (o, e) =>
-        {
-          IsBusy = false;
-          if (e.Error == null)
-          {
-            var result = e.NewObject;
-            var model = (T)result;
-            OnSaving(model);
-            Model = model;
-          }
-          else
-          {
-            Error = e.Error;
-          }
-          OnSaved();
-        };
-        Error = null;
-        IsBusy = true;
-        savable.BeginSave();
-      }
-#pragma warning disable CA1031 // Do not catch general exception types
-      catch (Exception ex)
-      {
-        IsBusy = false;
-        Error = ex;
-        OnSaved();
-      }
-#pragma warning restore CA1031 // Do not catch general exception types
-    }
-
-    /// <summary>
-    /// Method called after a save operation 
-    /// has completed and before Model is updated 
-    /// (when successful).
-    /// </summary>
-    [Obsolete("Use SaveAsync", false)]
-    protected virtual void OnSaving(T model)
-    { }
-
-    /// <summary>
-    /// Method called after a save operation 
-    /// has completed (whether successful or
-    /// not).
-    /// </summary>
-    [Obsolete("Use SaveAsync", false)]
-    protected virtual void OnSaved()
-    { }
-
-    #endregion
-
-#if ANDROID || IOS || XAMARIN || WINDOWS_UWP
+#if ANDROID || IOS || XAMARIN || WINDOWS_UWP || MAUI
     private T _model;
     /// <summary>
     /// Gets or sets the Model object.
@@ -462,10 +50,13 @@ namespace Csla.Xaml
       get { return _model; }
       set
       {
-        var oldValue = _model;
-        _model = value;
-        this.OnModelChanged((T)oldValue, _model);
-        OnPropertyChanged(nameof(Model));
+        if (!ReferenceEquals(value, _model))
+        {
+          var oldValue = _model;
+          _model = value;
+          this.OnModelChanged((T)oldValue, _model);
+          OnPropertyChanged(nameof(Model));
+        }
       }
     }
 #else
@@ -495,7 +86,7 @@ namespace Csla.Xaml
     /// ViewModel should automatically managed the
     /// lifetime of the Model.
     /// </summary>
-#if ANDROID || IOS || XAMARIN
+#if ANDROID || IOS || XAMARIN || MAUI
     public bool ManageObjectLifetimeProperty;
 #else
     public static readonly DependencyProperty ManageObjectLifetimeProperty =
@@ -512,7 +103,7 @@ namespace Csla.Xaml
     [ScaffoldColumn(false)]
     public bool ManageObjectLifetime
     {
-#if ANDROID || IOS || XAMARIN
+#if ANDROID || IOS || XAMARIN || MAUI
       get { return (bool)ManageObjectLifetimeProperty; }
       set { ManageObjectLifetimeProperty = value; }
 #else
@@ -532,9 +123,12 @@ namespace Csla.Xaml
       get { return _isBusy; }
       protected set
       {
-        _isBusy = value;
-        OnPropertyChanged(nameof(IsBusy));
-        OnSetProperties();
+        if (value != _isBusy)
+        {
+          _isBusy = value;
+          OnPropertyChanged(nameof(IsBusy));
+          OnSetProperties();
+        }
       }
     }
 
@@ -747,7 +341,7 @@ namespace Csla.Xaml
       // Does Model instance implement ITrackStatus 
       if (Model is ITrackStatus targetObject)
       {
-        var canDeleteInstance = BusinessRules.HasPermission(AuthorizationActions.DeleteObject, targetObject);
+        var canDeleteInstance = BusinessRules.HasPermission(ApplicationContext, AuthorizationActions.DeleteObject, targetObject);
 
         IsDirty = targetObject.IsDirty;
         IsValid = targetObject.IsValid;
@@ -768,13 +362,13 @@ namespace Csla.Xaml
           }
           else
           {
-            CanRemove = BusinessRules.HasPermission(AuthorizationActions.DeleteObject, itemType) &&
+            CanRemove = BusinessRules.HasPermission(ApplicationContext, AuthorizationActions.DeleteObject, itemType) &&
                         list.Count > 0 && !isObjectBusy;
-            CanAddNew = BusinessRules.HasPermission(AuthorizationActions.CreateObject, itemType) &&
+            CanAddNew = BusinessRules.HasPermission(ApplicationContext, AuthorizationActions.CreateObject, itemType) &&
                         !isObjectBusy;
           }
         }
-        else 
+        else
         {
           CanRemove = false;
           CanAddNew = false;
@@ -792,9 +386,9 @@ namespace Csla.Xaml
         }
         else
         {
-          CanRemove = BusinessRules.HasPermission(AuthorizationActions.DeleteObject, itemType) &&
+          CanRemove = BusinessRules.HasPermission(ApplicationContext, AuthorizationActions.DeleteObject, itemType) &&
                       list.Count > 0 && !isObjectBusy;
-          CanAddNew = BusinessRules.HasPermission(AuthorizationActions.CreateObject, itemType) &&
+          CanAddNew = BusinessRules.HasPermission(ApplicationContext, AuthorizationActions.CreateObject, itemType) &&
                       !isObjectBusy;
         }
       }
@@ -820,7 +414,11 @@ namespace Csla.Xaml
     /// </summary>
     public virtual bool CanCreateObject
     {
-      get { return _canCreateObject; }
+      get
+      {
+        SetPropertiesAtObjectLevel(); 
+        return _canCreateObject;
+      }
       protected set
       {
         if (_canCreateObject != value)
@@ -839,7 +437,11 @@ namespace Csla.Xaml
     /// </summary>
     public virtual bool CanGetObject
     {
-      get { return _canGetObject; }
+      get 
+      { 
+        SetPropertiesAtObjectLevel(); 
+        return _canGetObject; 
+      }
       protected set
       {
         if (_canGetObject != value)
@@ -859,7 +461,11 @@ namespace Csla.Xaml
     /// </summary>
     public virtual bool CanEditObject
     {
-      get { return _canEditObject; }
+      get 
+      { 
+        SetPropertiesAtObjectLevel(); 
+        return _canEditObject; 
+      }
       protected set
       {
         if (_canEditObject != value)
@@ -879,7 +485,11 @@ namespace Csla.Xaml
     /// </summary>
     public virtual bool CanDeleteObject
     {
-      get { return _canDeleteObject; }
+      get 
+      { 
+        SetPropertiesAtObjectLevel(); 
+        return _canDeleteObject; 
+      }
       protected set
       {
         if (_canDeleteObject != value)
@@ -890,18 +500,24 @@ namespace Csla.Xaml
       }
     }
 
+    private bool ObjectPropertiesSet;
+
     /// <summary>
     /// This method is only called from constuctor to set default values immediately.
     /// Sets the properties at object level.
     /// </summary>
     private void SetPropertiesAtObjectLevel()
     {
+      if (ObjectPropertiesSet)
+        return;
+      ObjectPropertiesSet = true;
+
       Type sourceType = typeof(T);
 
-      CanCreateObject = BusinessRules.HasPermission(Rules.AuthorizationActions.CreateObject, sourceType);
-      CanGetObject = BusinessRules.HasPermission(Rules.AuthorizationActions.GetObject, sourceType);
-      CanEditObject = BusinessRules.HasPermission(Rules.AuthorizationActions.EditObject, sourceType);
-      CanDeleteObject = BusinessRules.HasPermission(Rules.AuthorizationActions.DeleteObject, sourceType);
+      CanCreateObject = BusinessRules.HasPermission(ApplicationContext, Rules.AuthorizationActions.CreateObject, sourceType);
+      CanGetObject = BusinessRules.HasPermission(ApplicationContext, Rules.AuthorizationActions.GetObject, sourceType);
+      CanEditObject = BusinessRules.HasPermission(ApplicationContext, Rules.AuthorizationActions.EditObject, sourceType);
+      CanDeleteObject = BusinessRules.HasPermission(ApplicationContext, Rules.AuthorizationActions.DeleteObject, sourceType);
 
       // call SetProperties to set "instance" values 
       OnSetProperties();
@@ -912,7 +528,7 @@ namespace Csla.Xaml
     /// Model by invoking an action.
     /// </summary>
     /// <param name="factory">Factory method to invoke</param>
-    protected virtual async Task<T> RefreshAsync<F>(Func<Task<T>> factory)
+    public virtual async Task<T> RefreshAsync<F>(Func<Task<T>> factory)
     {
       T result = default;
       try
@@ -932,7 +548,7 @@ namespace Csla.Xaml
     /// Saves the Model, first committing changes
     /// if ManagedObjectLifetime is true.
     /// </summary>
-    protected virtual async Task<T> SaveAsync()
+    public virtual async Task<T> SaveAsync()
     {
       try
       {
@@ -950,8 +566,7 @@ namespace Csla.Xaml
         }
 
         IsBusy = true;
-        Model = (T) await savable.SaveAsync();
-        IsBusy = false;
+        Model = (T)await savable.SaveAsync();
       }
       finally
       {
@@ -986,7 +601,7 @@ namespace Csla.Xaml
       }
     }
 
-#if (ANDROID || IOS) || XAMARIN
+#if (ANDROID || IOS) || XAMARIN || MAUI
     /// <summary>
     /// Adds a new item to the Model (if it
     /// is a collection).
@@ -1142,16 +757,19 @@ namespace Csla.Xaml
     private void Model_PropertyChanged(object sender, PropertyChangedEventArgs e)
     {
       OnSetProperties();
+      ModelPropertyChanged?.Invoke(this, e);
     }
 
     private void Model_ChildChanged(object sender, ChildChangedEventArgs e)
     {
       OnSetProperties();
+      ModelChildChanged?.Invoke(this, e);
     }
 
     private void Model_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
     {
       OnSetProperties();
+      ModelCollectionChanged?.Invoke(this, e);
     }
 
     object IViewModel.Model
@@ -1159,6 +777,21 @@ namespace Csla.Xaml
       get { return Model; }
       set { Model = (T)value; }
     }
+
+    /// <summary>
+    /// Event raised when a property on the Model changes.
+    /// </summary>
+    public event PropertyChangedEventHandler ModelPropertyChanged;
+
+    /// <summary>
+    /// Event raised when a child of the Model changes.
+    /// </summary>
+    public event Action<object, ChildChangedEventArgs> ModelChildChanged;
+
+    /// <summary>
+    /// Event raised the Model changes and is a collection.
+    /// </summary>
+    public event Action<object, NotifyCollectionChangedEventArgs> ModelCollectionChanged;
 
     /// <summary>
     /// Event raised when a property changes.

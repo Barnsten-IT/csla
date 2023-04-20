@@ -42,7 +42,7 @@ namespace Csla.Test.AppContext
         /// Criteria for DataPortal overrides
         /// </summary>
         [Serializable()]
-        private class Criteria
+        internal class Criteria
         {
             public const string DefaultData = "<new>";
 
@@ -61,39 +61,7 @@ namespace Csla.Test.AppContext
                 this._Data = Data;
             }
         }
-        /// <summary>
-        /// Creates a new SimpleRoot object
-        /// </summary>
-        /// <returns></returns>
-        public static SimpleRoot NewSimpleRoot()
-        {
-            Criteria crit = new Criteria();
-            object result = Csla.DataPortal.Create<SimpleRoot>(crit);
-            return result as SimpleRoot;
-        }
-        /// <summary>
-        /// Gets a SimpleRoot object
-        /// </summary>
-        /// <param name="Data"></param>
-        /// <returns></returns>
-        public static SimpleRoot GetSimpleRoot(string Data)
-        {
-          return Csla.DataPortal.Fetch<SimpleRoot>(new Criteria(Data)) as SimpleRoot;
-        }
-        /// <summary>
-        /// Deletes a SimpleRoot object
-        /// </summary>
-        /// <param name="Data"></param>
-        public static void DeleteSimpleRoot(string Data)
-        {
-          Csla.DataPortal.Delete<SimpleRoot>(new Criteria(Data));
-        }
-        /// <summary>
-        /// Prevent direct creation
-        /// </summary>
-        private SimpleRoot()
-        {
-        }
+
         /// <summary>
         /// Handles new DataPortal Create calls
         /// </summary>
@@ -103,7 +71,7 @@ namespace Csla.Test.AppContext
             Criteria crit = criteria as Criteria;
             this._Data = crit.Data;
 
-            Csla.ApplicationContext.GlobalContext.Add("Root", "Created");
+            TestResults.Add("Root", "Created");
         }
         /// <summary>
         /// Handles DataPortal fetch calls
@@ -115,36 +83,38 @@ namespace Csla.Test.AppContext
             this._Data = crit.Data;
 
             this.MarkOld();
-            Csla.ApplicationContext.GlobalContext.Add("Root", "Fetched");
+            TestResults.Add("Root", "Fetched");
         }
         /// <summary>
         /// 
         /// </summary>
-        protected override void DataPortal_Update()
+        [Update]
+		protected void DataPortal_Update()
         {
             if (this.IsDeleted)
             {
-                Csla.ApplicationContext.GlobalContext.Add("Root", "Deleted");
+                TestResults.Add("Root", "Deleted");
                 this.MarkNew();
             }
             else
             {
                 if (this.IsNew)
                 {
-                    Csla.ApplicationContext.GlobalContext.Add("Root", "Inserted");
+                  TestResults.Add("Root", "Inserted");
                 }
-                else Csla.ApplicationContext.GlobalContext.Add("Root", "Updated");
-                
-                this.MarkOld();
+                else TestResults.Add("Root", "Updated");
+
+        this.MarkOld();
             }
         }
         /// <summary>
         /// 
         /// </summary>
         /// <param name="criteria"></param>
-        protected void DataPortal_Delete(object criteria)
+        [Delete]
+		protected void DataPortal_Delete(object criteria)
         {
-            Csla.ApplicationContext.GlobalContext.Add("Root", "Deleted");
+            TestResults.Add("Root", "Deleted");
         }
     }
 }

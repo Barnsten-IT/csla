@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
+using Csla.TestHelpers;
 
 #if !NUNIT
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -25,11 +26,20 @@ namespace Csla.Test.Basic
   [TestClass]
   public class BasicTests
   {
+    private static TestDIContext _testDIContext;
+
+    [ClassInitialize]
+    public static void ClassInitialize(TestContext context)
+    {
+      _testDIContext = TestDIContextFactory.CreateDefaultContext();
+    }
+
     [TestMethod]
     public void TestNotUndoableField()
     {
-      Csla.ApplicationContext.GlobalContext.Clear();
-      Csla.Test.DataBinding.ParentEntity p = Csla.Test.DataBinding.ParentEntity.NewParentEntity();
+      TestResults.Reinitialise();
+
+      Csla.Test.DataBinding.ParentEntity p = CreateParentEntityInstance();
 
       p.NotUndoable = "something";
       p.Data = "data";
@@ -47,15 +57,19 @@ namespace Csla.Test.Basic
     [TestMethod]
     public void TestReadOnlyList()
     {
+      TestResults.Reinitialise();
+
       //ReadOnlyList list = ReadOnlyList.GetReadOnlyList();
-      // Assert.AreEqual("Fetched", Csla.ApplicationContext.GlobalContext["ReadOnlyList"]);
+      //Assert.AreEqual("Fetched", TestResults.GetResult("ReadOnlyList"));
     }
 
     [TestMethod]
     public void TestNameValueList()
     {
-      NameValueListObj nvList = NameValueListObj.GetNameValueListObj();
-      Assert.AreEqual("Fetched", Csla.ApplicationContext.GlobalContext["NameValueListObj"]);
+      TestResults.Reinitialise();
+
+      NameValueListObj nvList = GetNameValueListObjInstance();
+      Assert.AreEqual("Fetched", TestResults.GetResult("NameValueListObj"));
 
       Assert.AreEqual("element_1", nvList[1].Value);
 
@@ -71,20 +85,24 @@ namespace Csla.Test.Basic
     [TestMethod]
     public void TestCommandBase()
     {
-      Csla.ApplicationContext.GlobalContext.Clear();
-      CommandObject obj = new CommandObject();
-      Assert.AreEqual("Executed", obj.ExecuteServerCode().AProperty);
+      TestResults.Reinitialise();
+
+      IDataPortal<CommandObject> dataPortal = _testDIContext.CreateDataPortal<CommandObject>();
+      CommandObject obj = dataPortal.Create();
+      obj = dataPortal.Execute(obj);
+      Assert.AreEqual("Executed", obj.AProperty);
     }
 
     [TestMethod]
     public void CreateGenRoot()
     {
-      Csla.ApplicationContext.GlobalContext.Clear();
+      TestResults.Reinitialise();
+
       GenRoot root;
-      root = GenRoot.NewRoot();
+      root = CreateGenRootInstance();
       Assert.IsNotNull(root);
       Assert.AreEqual("<new>", root.Data);
-      Assert.AreEqual("Created", Csla.ApplicationContext.GlobalContext["GenRoot"]);
+      Assert.AreEqual("Created", TestResults.GetResult("GenRoot"));
       Assert.AreEqual(true, root.IsNew);
       Assert.AreEqual(false, root.IsDeleted);
       Assert.AreEqual(true, root.IsDirty);
@@ -93,15 +111,16 @@ namespace Csla.Test.Basic
     [TestMethod]
     public void InheritanceUndo()
     {
-      Csla.ApplicationContext.GlobalContext.Clear();
+      TestResults.Reinitialise();
+
       GenRoot root;
-      root = GenRoot.NewRoot();
+      root = CreateGenRootInstance();
       root.BeginEdit();
       root.Data = "abc";
       root.CancelEdit();
 
-      Csla.ApplicationContext.GlobalContext.Clear();
-      root = GenRoot.NewRoot();
+      TestResults.Reinitialise();
+      root = CreateGenRootInstance();
       root.BeginEdit();
       root.Data = "abc";
       root.ApplyEdit();
@@ -110,12 +129,13 @@ namespace Csla.Test.Basic
     [TestMethod]
     public void CreateRoot()
     {
-      Csla.ApplicationContext.GlobalContext.Clear();
+      TestResults.Reinitialise();
+
       Root root;
-      root = Csla.Test.Basic.Root.NewRoot();
+      root = CreateRootInstance();
       Assert.IsNotNull(root);
       Assert.AreEqual("<new>", root.Data);
-      Assert.AreEqual("Created", Csla.ApplicationContext.GlobalContext["Root"]);
+      Assert.AreEqual("Created", TestResults.GetResult("Root"));
       Assert.AreEqual(true, root.IsNew);
       Assert.AreEqual(false, root.IsDeleted);
       Assert.AreEqual(true, root.IsDirty);
@@ -124,8 +144,9 @@ namespace Csla.Test.Basic
     [TestMethod]
     public void AddChild()
     {
-      Csla.ApplicationContext.GlobalContext.Clear();
-      Root root = Csla.Test.Basic.Root.NewRoot();
+      TestResults.Reinitialise();
+
+      Root root = CreateRootInstance();
       root.Children.Add("1");
       Assert.AreEqual(1, root.Children.Count);
       Assert.AreEqual("1", root.Children[0].Data);
@@ -134,8 +155,9 @@ namespace Csla.Test.Basic
     [TestMethod]
     public void AddRemoveChild()
     {
-      Csla.ApplicationContext.GlobalContext.Clear();
-      Root root = Csla.Test.Basic.Root.NewRoot();
+      TestResults.Reinitialise();
+
+      Root root = CreateRootInstance();
       root.Children.Add("1");
       root.Children.Remove(root.Children[0]);
       Assert.AreEqual(0, root.Children.Count);
@@ -144,8 +166,9 @@ namespace Csla.Test.Basic
     [TestMethod]
     public void AddRemoveAddChild()
     {
-      Csla.ApplicationContext.GlobalContext.Clear();
-      Root root = Csla.Test.Basic.Root.NewRoot();
+      TestResults.Reinitialise();
+
+      Root root = CreateRootInstance();
       root.Children.Add("1");
       root.BeginEdit();
       root.Children.Remove(root.Children[0]);
@@ -160,8 +183,9 @@ namespace Csla.Test.Basic
     [TestMethod]
     public void AddGrandChild()
     {
-      Csla.ApplicationContext.GlobalContext.Clear();
-      Root root = Csla.Test.Basic.Root.NewRoot();
+      TestResults.Reinitialise();
+
+      Root root = CreateRootInstance();
       root.Children.Add("1");
       Child child = root.Children[0];
       child.GrandChildren.Add("1");
@@ -172,8 +196,9 @@ namespace Csla.Test.Basic
     [TestMethod]
     public void AddRemoveGrandChild()
     {
-      Csla.ApplicationContext.GlobalContext.Clear();
-      Root root = Csla.Test.Basic.Root.NewRoot();
+      TestResults.Reinitialise();
+
+      Root root = CreateRootInstance();
       root.Children.Add("1");
       Child child = root.Children[0];
       child.GrandChildren.Add("1");
@@ -184,8 +209,9 @@ namespace Csla.Test.Basic
     [TestMethod]
     public void ClearChildList()
     {
-      Csla.ApplicationContext.GlobalContext.Clear();
-      Root root = Csla.Test.Basic.Root.NewRoot();
+      TestResults.Reinitialise();
+
+      Root root = CreateRootInstance();
       root.Children.Add("A");
       root.Children.Add("B");
       root.Children.Add("C");
@@ -197,8 +223,9 @@ namespace Csla.Test.Basic
     [TestMethod]
     public void NestedAddAcceptchild()
     {
-      Csla.ApplicationContext.GlobalContext.Clear();
-      Root root = Csla.Test.Basic.Root.NewRoot();
+      TestResults.Reinitialise();
+
+      Root root = CreateRootInstance();
       root.BeginEdit();
       root.Children.Add("A");
       root.BeginEdit();
@@ -214,8 +241,9 @@ namespace Csla.Test.Basic
     [TestMethod]
     public void NestedAddDeleteAcceptChild()
     {
-      Csla.ApplicationContext.GlobalContext.Clear();
-      Root root = Csla.Test.Basic.Root.NewRoot();
+      TestResults.Reinitialise();
+
+      Root root = CreateRootInstance();
       root.BeginEdit();
       root.Children.Add("A");
       root.BeginEdit();
@@ -241,14 +269,15 @@ namespace Csla.Test.Basic
     [TestMethod]
     public void BasicEquality()
     {
-      Csla.ApplicationContext.GlobalContext.Clear();
-      Root r1 = Root.NewRoot();
+      TestResults.Reinitialise();
+
+      Root r1 = CreateRootInstance();
       r1.Data = "abc";
       Assert.AreEqual(true, r1.Equals(r1), "objects should be equal on instance compare");
       Assert.AreEqual(true, Equals(r1, r1), "objects should be equal on static compare");
 
-      Csla.ApplicationContext.GlobalContext.Clear();
-      Root r2 = Root.NewRoot();
+      TestResults.Reinitialise();
+      Root r2 = CreateRootInstance();
       r2.Data = "xyz";
       Assert.AreEqual(false, r1.Equals(r2), "objects should not be equal");
       Assert.AreEqual(false, Equals(r1, r2), "objects should not be equal");
@@ -261,8 +290,9 @@ namespace Csla.Test.Basic
     [TestMethod]
     public void ChildEquality()
     {
-      Csla.ApplicationContext.GlobalContext.Clear();
-      Root root = Root.NewRoot();
+      TestResults.Reinitialise();
+
+      Root root = CreateRootInstance();
       root.Children.Add("abc");
       root.Children.Add("xyz");
       root.Children.Add("123");
@@ -290,8 +320,9 @@ namespace Csla.Test.Basic
     [TestMethod]
     public void DeletedListTest()
     {
-      Csla.ApplicationContext.GlobalContext.Clear();
-      Root root = Csla.Test.Basic.Root.NewRoot();
+      TestResults.Reinitialise();
+
+      Root root = CreateRootInstance();
       root.Children.Add("1");
       root.Children.Add("2");
       root.Children.Add("3");
@@ -313,8 +344,9 @@ namespace Csla.Test.Basic
     [TestMethod]
     public void DeletedListTestWithCancel()
     {
-      Csla.ApplicationContext.GlobalContext.Clear();
-      Root root = Csla.Test.Basic.Root.NewRoot();
+      TestResults.Reinitialise();
+
+      Root root = CreateRootInstance();
       root.Children.Add("1");
       root.Children.Add("2");
       root.Children.Add("3");
@@ -343,6 +375,8 @@ namespace Csla.Test.Basic
     [TestMethod]
     public void SuppressListChangedEventsDoNotRaiseCollectionChanged()
     {
+      TestResults.Reinitialise();
+      
       bool changed = false;
       var obj = new RootList();
       obj.ListChanged += (o, e) =>
@@ -366,7 +400,9 @@ namespace Csla.Test.Basic
     [TestMethod]
     public async Task ChildEditLevelClone()
     {
-      var list = await Csla.DataPortal.CreateAsync<RootList>();
+      TestResults.Reinitialise();
+
+      var list = await CreateRootListInstanceAsync();
       list.BeginEdit();
       list.AddNew();
       var clone = (RootList)((ICloneable)list).Clone();
@@ -376,7 +412,9 @@ namespace Csla.Test.Basic
     [TestMethod]
     public async Task ChildEditLevelDeleteClone()
     {
-      var list = await Csla.DataPortal.CreateAsync<RootList>();
+      TestResults.Reinitialise();
+      
+      var list = await CreateRootListInstanceAsync();
       list.BeginEdit();
       list.AddNew();
       list.RemoveAt(0);
@@ -387,7 +425,9 @@ namespace Csla.Test.Basic
     [TestMethod]
     public async Task UndoStateStack()
     {
-      var obj = await Csla.DataPortal.CreateAsync<Root>(new Root.Criteria(""));
+      TestResults.Reinitialise();
+
+      var obj = await CreateRootInstanceAsync(new Root.Criteria(""));
       Assert.AreEqual("", obj.Data);
       obj.BeginEdit();
       obj.Data = "1";
@@ -411,8 +451,51 @@ namespace Csla.Test.Basic
     [TestCleanup]
     public void ClearContextsAfterEachTest()
     {
-      Csla.ApplicationContext.GlobalContext.Clear();
+      TestResults.Reinitialise();
     }
+
+    private Root CreateRootInstance()
+    {
+      IDataPortal<Root> dataPortal = _testDIContext.CreateDataPortal<Root>();
+      return dataPortal.Create(new Root.Criteria());
+    }
+
+    private async Task<Root> CreateRootInstanceAsync()
+    {
+      IDataPortal<Root> dataPortal = _testDIContext.CreateDataPortal<Root>();
+      return await dataPortal.CreateAsync(new Root.Criteria());
+    }
+
+    private async Task<Root> CreateRootInstanceAsync(Root.Criteria criteria)
+    {
+      IDataPortal<Root> dataPortal = _testDIContext.CreateDataPortal<Root>();
+      return await dataPortal.CreateAsync(criteria);
+    }
+
+    private async Task<RootList> CreateRootListInstanceAsync()
+    {
+      IDataPortal<RootList> dataPortal = _testDIContext.CreateDataPortal<RootList>();
+      return await dataPortal.CreateAsync();
+    }
+
+    private GenRoot CreateGenRootInstance()
+    {
+      IDataPortal<GenRoot> dataPortal = _testDIContext.CreateDataPortal<GenRoot>();
+      return dataPortal.Create(new GenRootBase.Criteria());
+    }
+
+    private Csla.Test.DataBinding.ParentEntity CreateParentEntityInstance()
+    {
+      IDataPortal<Csla.Test.DataBinding.ParentEntity> dataPortal = _testDIContext.CreateDataPortal<Csla.Test.DataBinding.ParentEntity>();
+      return dataPortal.Create();
+    }
+
+    private NameValueListObj GetNameValueListObjInstance()
+    {
+      IDataPortal<NameValueListObj> dataPortal = _testDIContext.CreateDataPortal<NameValueListObj>();
+      return dataPortal.Fetch();
+    }
+
   }
 
   public class FormSimulator

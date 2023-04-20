@@ -17,8 +17,6 @@ namespace Csla.Test.FieldManager
     {
       get 
       {
-        if (!FieldManager.FieldExists(ChildProperty))
-          SetProperty<Child>(ChildProperty, Child.NewChild());
         return GetProperty<Child>(ChildProperty); 
       }
     }
@@ -28,23 +26,30 @@ namespace Csla.Test.FieldManager
     {
       get
       {
-        if (!FieldManager.FieldExists(ChildListProperty))
-          SetProperty<ChildList>(ChildListProperty, ChildList.GetList());
         return GetProperty<ChildList>(ChildListProperty);
       }
     }
 
-    public void FetchChild()
+    public void FetchChild(IChildDataPortal<Child> childDataPortal)
     {
-      SetProperty<Child>(ChildProperty, Child.GetChild());
+      SetProperty<Child>(ChildProperty, Child.GetChild(childDataPortal));
     }
 
-    protected override void DataPortal_Insert()
+    [Create]
+    private void Create([Inject]IChildDataPortal<Child> childDataPortal, [Inject]IChildDataPortal<ChildList> childListDataPortal)
+    {
+      LoadProperty(ChildProperty, Child.NewChild(childDataPortal));
+      LoadProperty(ChildListProperty, ChildList.GetList(childListDataPortal));
+    }
+
+    [Insert]
+    protected void DataPortal_Insert()
     {
       FieldManager.UpdateAllChildren();
     }
 
-    protected override void DataPortal_Update()
+    [Update]
+		protected void DataPortal_Update()
     {
       FieldManager.UpdateAllChildren();
     }

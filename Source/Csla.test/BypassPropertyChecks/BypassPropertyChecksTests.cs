@@ -7,10 +7,10 @@
 //-----------------------------------------------------------------------
 using Csla;
 using Csla.DataPortalClient;
-using Csla.Testing.Business.ReadOnlyTest;
 using System;
-using Csla.Testing.Business.Security;
 using UnitDriven;
+using System.Security.Claims;
+using Csla.TestHelpers;
 
 #if NUNIT
 using NUnit.Framework;
@@ -29,16 +29,31 @@ namespace Csla.Test.BypassPropertyChecks
   [TestClass]
   public class BypassPropertyChecksTests : TestBase
   {
+    private static ClaimsPrincipal GetPrincipal(params string[] roles)
+    {
+      var identity = new ClaimsIdentity();
+      foreach (var item in roles)
+        identity.AddClaim(new Claim(ClaimTypes.Role, item));
+      return new ClaimsPrincipal(identity);
+    }
+
+    private static TestDIContext _testDIContext;
+
+    [ClassInitialize]
+    public static void ClassInitialize(TestContext context)
+    {
+      _testDIContext = TestDIContextFactory.CreateDefaultContext();
+    }
 
     [TestMethod]
     public void TestBypassReadWriteWithRightsTurnNotificationBackOn()
     {
+      TestDIContext testDIContext = TestDIContextFactory.CreateContext(GetPrincipal("Admin"));
+      IDataPortal<BypassBusinessBase> dataPortal = testDIContext.CreateDataPortal<BypassBusinessBase>();
+
       UnitTestContext context = GetContext();
-#pragma warning disable CS0436 // Type conflicts with imported type
-      Csla.Test.Security.TestPrincipal.SimulateLogin();
-#pragma warning restore CS0436 // Type conflicts with imported type
       bool propertyChangedFired = false;
-      BypassBusinessBase testObj = new BypassBusinessBase();
+      BypassBusinessBase testObj = dataPortal.Fetch();
       testObj.PropertyChanged += (o, e) =>
       {
         propertyChangedFired = true;
@@ -59,9 +74,6 @@ namespace Csla.Test.BypassPropertyChecks
       context.Assert.AreEqual(true, testObj.IsDirty);
 
       context.Assert.Success();
-#pragma warning disable CS0436 // Type conflicts with imported type
-      Csla.Test.Security.TestPrincipal.SimulateLogout();
-#pragma warning restore CS0436 // Type conflicts with imported type
       context.Complete();
     }
 
@@ -69,13 +81,13 @@ namespace Csla.Test.BypassPropertyChecks
     [ExpectedException(typeof(Csla.Security.SecurityException))]
     public void TestBypassReadWriteNoRightsTurnNotificationBackOn()
     {
+      TestDIContext testDIContext = TestDIContextFactory.CreateContext(GetPrincipal("Admin"));
+      IDataPortal<BypassBusinessBase> dataPortal = testDIContext.CreateDataPortal<BypassBusinessBase>();
+
       UnitTestContext context = GetContext();
-#pragma warning disable CS0436 // Type conflicts with imported type
-      Csla.Test.Security.TestPrincipal.SimulateLogin();
-#pragma warning restore CS0436 // Type conflicts with imported type
       bool propertyChangedFired = false;
 
-      BypassBusinessBase testObj = new BypassBusinessBase();
+      BypassBusinessBase testObj = dataPortal.Fetch();
       testObj.PropertyChanged += (o, e) =>
       {
         propertyChangedFired = true;
@@ -88,9 +100,6 @@ namespace Csla.Test.BypassPropertyChecks
       context.Assert.AreEqual(1, testObj.ReadId2ByPass()); // still one becuase set failed
       context.Assert.AreEqual(true, testObj.IsDirty);
       context.Assert.Success();
-#pragma warning disable CS0436 // Type conflicts with imported type
-      Csla.Test.Security.TestPrincipal.SimulateLogout();
-#pragma warning restore CS0436 // Type conflicts with imported type
       context.Complete();
     }
 
@@ -98,13 +107,13 @@ namespace Csla.Test.BypassPropertyChecks
     [TestMethod]
     public void TestBypassReadWriteNoRights()
     {
+      TestDIContext testDIContext = TestDIContextFactory.CreateContext(GetPrincipal("Admin"));
+      IDataPortal<BypassBusinessBase> dataPortal = testDIContext.CreateDataPortal<BypassBusinessBase>();
+
       UnitTestContext context = GetContext();
-#pragma warning disable CS0436 // Type conflicts with imported type
-      Csla.Test.Security.TestPrincipal.SimulateLogin();
-#pragma warning restore CS0436 // Type conflicts with imported type
       bool propertyChangedFired = false;
 
-      BypassBusinessBase testObj = new BypassBusinessBase();
+      BypassBusinessBase testObj = dataPortal.Fetch();
       testObj.PropertyChanged += (o, e) =>
         {
           propertyChangedFired = true;
@@ -114,21 +123,18 @@ namespace Csla.Test.BypassPropertyChecks
       context.Assert.AreEqual(false, propertyChangedFired);
       context.Assert.AreEqual(false, testObj.IsDirty);
       context.Assert.Success();
-#pragma warning disable CS0436 // Type conflicts with imported type
-      Csla.Test.Security.TestPrincipal.SimulateLogout();
-#pragma warning restore CS0436 // Type conflicts with imported type
       context.Complete();
     }
 
     [TestMethod]
     public void TestBypassReadWriteWithRights()
     {
+      TestDIContext customDIContext = TestDIContextFactory.CreateContext(GetPrincipal("Admin"));
+      IDataPortal<BypassBusinessBase> dataPortal = customDIContext.CreateDataPortal<BypassBusinessBase>();
+
       UnitTestContext context = GetContext();
-#pragma warning disable CS0436 // Type conflicts with imported type
-      Csla.Test.Security.TestPrincipal.SimulateLogin();
-#pragma warning restore CS0436 // Type conflicts with imported type
       bool propertyChangedFired = false;
-      BypassBusinessBase testObj = new BypassBusinessBase();
+      BypassBusinessBase testObj = dataPortal.Fetch();
       testObj.PropertyChanged += (o, e) =>
       {
         propertyChangedFired = true;
@@ -138,9 +144,6 @@ namespace Csla.Test.BypassPropertyChecks
       context.Assert.AreEqual(true, propertyChangedFired);
       context.Assert.AreEqual(true, testObj.IsDirty);
       context.Assert.Success();
-#pragma warning disable CS0436 // Type conflicts with imported type
-      Csla.Test.Security.TestPrincipal.SimulateLogout();
-#pragma warning restore CS0436 // Type conflicts with imported type
       context.Complete();
     }
 
@@ -148,11 +151,11 @@ namespace Csla.Test.BypassPropertyChecks
     [ExpectedException(typeof(Csla.Security.SecurityException))]
     public void TestBypassWriteNoRightsDoNotBypass()
     {
+      TestDIContext testDIContext = TestDIContextFactory.CreateContext(GetPrincipal("Admin"));
+      IDataPortal<BypassBusinessBase> dataPortal = testDIContext.CreateDataPortal<BypassBusinessBase>();
+
       UnitTestContext context = GetContext();
-#pragma warning disable CS0436 // Type conflicts with imported type
-      Csla.Test.Security.TestPrincipal.SimulateLogin();
-#pragma warning restore CS0436 // Type conflicts with imported type
-      BypassBusinessBase testObj = new BypassBusinessBase();
+      BypassBusinessBase testObj = dataPortal.Fetch();
       bool propertyChangedFired = false;
       testObj.PropertyChanged += (o, e) =>
       {
@@ -163,21 +166,18 @@ namespace Csla.Test.BypassPropertyChecks
       context.Assert.AreEqual(true, propertyChangedFired);
       context.Assert.AreEqual(true, testObj.IsDirty);
       context.Assert.Success();
-#pragma warning disable CS0436 // Type conflicts with imported type
-      Csla.Test.Security.TestPrincipal.SimulateLogout();
-#pragma warning restore CS0436 // Type conflicts with imported type
       context.Complete();
     }
 
     [TestMethod]
     public void TestBypassReadNoRightsDoNotBypass()
     {
+      TestDIContext testDIContext = TestDIContextFactory.CreateContext(GetPrincipal("Admin"));
+      IDataPortal<BypassBusinessBase> dataPortal = testDIContext.CreateDataPortal<BypassBusinessBase>();
+
       UnitTestContext context = GetContext();
-#pragma warning disable CS0436 // Type conflicts with imported type
-      Csla.Test.Security.TestPrincipal.SimulateLogin();
-#pragma warning restore CS0436 // Type conflicts with imported type
       bool propertyChangedFired = false;
-      BypassBusinessBase testObj = new BypassBusinessBase();
+      BypassBusinessBase testObj = dataPortal.Fetch();
       testObj.PropertyChanged += (o, e) =>
       {
         propertyChangedFired = true;
@@ -188,9 +188,6 @@ namespace Csla.Test.BypassPropertyChecks
       context.Assert.AreEqual(0, testObj.ReadId2()); // 0 becuase we cannot read
       context.Assert.AreEqual(false, propertyChangedFired);
       context.Assert.Success();
-#pragma warning disable CS0436 // Type conflicts with imported type
-      Csla.Test.Security.TestPrincipal.SimulateLogout();
-#pragma warning restore CS0436 // Type conflicts with imported type
       context.Complete();
     }
 
@@ -199,13 +196,13 @@ namespace Csla.Test.BypassPropertyChecks
     [TestMethod]
     public void TestBypassReadWriteNoRightsBackingField()
     {
+      TestDIContext testDIContext = TestDIContextFactory.CreateContext(GetPrincipal("Admin"));
+      IDataPortal<BypassBusinessBase> dataPortal = testDIContext.CreateDataPortal<BypassBusinessBase>();
+
       UnitTestContext context = GetContext();
-#pragma warning disable CS0436 // Type conflicts with imported type
-      Csla.Test.Security.TestPrincipal.SimulateLogin();
-#pragma warning restore CS0436 // Type conflicts with imported type
       bool propertyChangedFired = false;
 
-      BypassBusinessBase testObj = new BypassBusinessBase();
+      BypassBusinessBase testObj = dataPortal.Fetch();
       testObj.PropertyChanged += (o, e) =>
       {
         propertyChangedFired = true;
@@ -215,21 +212,18 @@ namespace Csla.Test.BypassPropertyChecks
       context.Assert.AreEqual(1, testObj.ReadId4ByPass());
       context.Assert.AreEqual(false, propertyChangedFired);
       context.Assert.Success();
-#pragma warning disable CS0436 // Type conflicts with imported type
-      Csla.Test.Security.TestPrincipal.SimulateLogout();
-#pragma warning restore CS0436 // Type conflicts with imported type
       context.Complete();
     }
 
     [TestMethod]
     public void TestBypassReadWriteWithRightsBackingField()
     {
+      TestDIContext testDIContext = TestDIContextFactory.CreateContext(GetPrincipal("Admin"));
+      IDataPortal<BypassBusinessBase> dataPortal = testDIContext.CreateDataPortal<BypassBusinessBase>();
+
       UnitTestContext context = GetContext();
-#pragma warning disable CS0436 // Type conflicts with imported type
-      Csla.Test.Security.TestPrincipal.SimulateLogin();
-#pragma warning restore CS0436 // Type conflicts with imported type
       bool propertyChangedFired = false;
-      BypassBusinessBase testObj = new BypassBusinessBase();
+      BypassBusinessBase testObj = dataPortal.Fetch();
       testObj.PropertyChanged += (o, e) =>
       {
         propertyChangedFired = true;
@@ -239,9 +233,6 @@ namespace Csla.Test.BypassPropertyChecks
       context.Assert.AreEqual(1, testObj.ReadId3());
       context.Assert.AreEqual(true, propertyChangedFired);
       context.Assert.Success();
-#pragma warning disable CS0436 // Type conflicts with imported type
-      Csla.Test.Security.TestPrincipal.SimulateLogout();
-#pragma warning restore CS0436 // Type conflicts with imported type
       context.Complete();
     }
 
@@ -249,11 +240,11 @@ namespace Csla.Test.BypassPropertyChecks
     [ExpectedException(typeof(Csla.Security.SecurityException))]
     public void TestBypassWriteNoRightsDoNotBypassBackingField()
     {
+      TestDIContext testDIContext = TestDIContextFactory.CreateContext(GetPrincipal("Admin"));
+      IDataPortal<BypassBusinessBase> dataPortal = testDIContext.CreateDataPortal<BypassBusinessBase>();
+
       UnitTestContext context = GetContext();
-#pragma warning disable CS0436 // Type conflicts with imported type
-      Csla.Test.Security.TestPrincipal.SimulateLogin();
-#pragma warning restore CS0436 // Type conflicts with imported type
-      BypassBusinessBase testObj = new BypassBusinessBase();
+      BypassBusinessBase testObj = dataPortal.Fetch();
       bool propertyChangedFired = false;
       testObj.PropertyChanged += (o, e) =>
       {
@@ -264,21 +255,18 @@ namespace Csla.Test.BypassPropertyChecks
       context.Assert.AreEqual(1, testObj.ReadId4ByPass());
       context.Assert.AreEqual(true, propertyChangedFired);
       context.Assert.Success();
-#pragma warning disable CS0436 // Type conflicts with imported type
-      Csla.Test.Security.TestPrincipal.SimulateLogout();
-#pragma warning restore CS0436 // Type conflicts with imported type
       context.Complete();
     }
 
     [TestMethod]
     public void TestBypassReadNoRightsDoNotBypassBackingField()
     {
+      TestDIContext testDIContext = TestDIContextFactory.CreateContext(GetPrincipal("Admin"));
+      IDataPortal<BypassBusinessBase> dataPortal = testDIContext.CreateDataPortal<BypassBusinessBase>();
+      
       UnitTestContext context = GetContext();
-#pragma warning disable CS0436 // Type conflicts with imported type
-      Csla.Test.Security.TestPrincipal.SimulateLogin();
-#pragma warning restore CS0436 // Type conflicts with imported type
       bool propertyChangedFired = false;
-      BypassBusinessBase testObj = new BypassBusinessBase();
+      BypassBusinessBase testObj = dataPortal.Fetch();
       testObj.PropertyChanged += (o, e) =>
       {
         propertyChangedFired = true;
@@ -289,27 +277,21 @@ namespace Csla.Test.BypassPropertyChecks
       context.Assert.AreEqual(0, testObj.ReadId4()); // 0 becuase we cannot read
       context.Assert.AreEqual(false, propertyChangedFired);
       context.Assert.Success();
-#pragma warning disable CS0436 // Type conflicts with imported type
-      Csla.Test.Security.TestPrincipal.SimulateLogout();
-#pragma warning restore CS0436 // Type conflicts with imported type
       context.Complete();
     }
 
     [TestMethod]
     public void TestBypassFactory()
     {
-      UnitTestContext context = GetContext();
-#pragma warning disable CS0436 // Type conflicts with imported type
-      Csla.Test.Security.TestPrincipal.SimulateLogin();
-#pragma warning restore CS0436 // Type conflicts with imported type
+      TestDIContext testDIContext = TestDIContextFactory.CreateContext(GetPrincipal("Admin"));
+      IDataPortal<BypassBusinessBaseUsingFactory> dataPortal = testDIContext.CreateDataPortal<BypassBusinessBaseUsingFactory>();
 
-      BypassBusinessBaseUsingFactory obj = BypassBusinessBaseUsingFactory.GetObject();
+      UnitTestContext context = GetContext();
+
+      BypassBusinessBaseUsingFactory obj = BypassBusinessBaseUsingFactory.GetObject(dataPortal);
       context.Assert.AreEqual(false, obj.IsDirty);
       context.Assert.AreEqual(7, obj.ReadId2ByPass());
       context.Assert.Success();
-#pragma warning disable CS0436 // Type conflicts with imported type
-      Csla.Test.Security.TestPrincipal.SimulateLogout();
-#pragma warning restore CS0436 // Type conflicts with imported type
       context.Complete();
     }
   }

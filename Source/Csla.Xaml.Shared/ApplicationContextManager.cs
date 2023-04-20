@@ -5,8 +5,10 @@
 // </copyright>
 // <summary>Provides consistent context information between the client</summary>
 //-----------------------------------------------------------------------
+using System;
 using System.Security.Principal;
 using System.Threading;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Csla.Xaml
 {
@@ -16,6 +18,23 @@ namespace Csla.Xaml
   public class ApplicationContextManager : Csla.Core.ApplicationContextManager
   {
     private static IPrincipal _principal = null;
+    private static ApplicationContext applicationContext;
+
+    /// <summary>
+    /// Method called when the ApplicationContext
+    /// property has been set to a new value.
+    /// </summary>
+    protected override void OnApplicationContextSet() => applicationContext = base.ApplicationContext;
+
+    /// <summary>
+    /// Gets the current ApplicationContext.
+    /// </summary>
+    public static ApplicationContext GetApplicationContext()
+    {
+      if (applicationContext == null)
+        throw new InvalidOperationException($"{nameof(applicationContext)} == null");
+      return applicationContext;
+    }
 
     /// <summary>
     /// Gets the current principal.
@@ -25,10 +44,21 @@ namespace Csla.Xaml
     {
       if (_principal == null)
       {
-        if (ApplicationContext.AuthenticationType == "Windows")
+#if NET6_0_OR_GREATER
+        if (OperatingSystem.IsWindows() && ApplicationContext.AuthenticationType == "Windows")
           SetUser(new WindowsPrincipal(WindowsIdentity.GetCurrent()));
         else
-          SetUser(new Csla.Security.UnauthenticatedPrincipal());
+          SetUser(new System.Security.Claims.ClaimsPrincipal());
+#elif NETFRAMEWORK
+        if (ApplicationContext.AuthenticationType == "Windows")
+#pragma warning disable CA1416 // Validate platform compatibility
+          SetUser(new WindowsPrincipal(WindowsIdentity.GetCurrent()));
+#pragma warning restore CA1416 // Validate platform compatibility
+        else
+          SetUser(new System.Security.Claims.ClaimsPrincipal());
+#else
+        SetUser(new System.Security.Claims.ClaimsPrincipal());
+#endif
       }
       return _principal;
     }

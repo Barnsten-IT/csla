@@ -26,33 +26,10 @@ namespace Csla.Test.DataPortalTest
 
     #endregion
 
-
-    #region Factory Methods
-
-    public static Legacy NewObject()
-    {
-      return Csla.DataPortal.Create<Legacy>();
-    }
-
-    public static Legacy GetObject(int id)
-    {
-      return Csla.DataPortal.Fetch<Legacy>(new Criteria(id));
-    }
-
-    public static void DeleteObject(int id)
-    {
-      Csla.DataPortal.Delete<Legacy>(new Criteria(id));
-    }
-
-    private Legacy()
-    { /* Require use of factory methods */ }
-
-    #endregion
-
     #region Data Access
 
     [Serializable()]
-    private class Criteria
+    internal class Criteria
     {
       private int _id;
       public int Id
@@ -63,40 +40,47 @@ namespace Csla.Test.DataPortalTest
       { _id = id; }
     }
 
-    protected override void DataPortal_Create()
+    [Create]
+		protected void DataPortal_Create()
     {
       _id = 0;
-      Csla.ApplicationContext.GlobalContext.Clear();
-      ApplicationContext.GlobalContext.Add("Legacy", "Created");
+      TestResults.Reinitialise();
+      TestResults.Add("Legacy", "Created");
     }
 
     protected void DataPortal_Fetch(object criteria)
     {
       _id = ((Criteria)criteria).Id;
-      Csla.ApplicationContext.GlobalContext.Clear();
-      ApplicationContext.GlobalContext.Add("Legacy", "Fetched");
-    }
-    protected override void DataPortal_Insert()
-    {
-      Csla.ApplicationContext.GlobalContext.Clear();
-      ApplicationContext.GlobalContext.Add("Legacy", "Inserted");
+      TestResults.Reinitialise();
+      TestResults.Add("Legacy", "Fetched");
     }
 
-    protected override void DataPortal_Update()
+    [Insert]
+    protected void DataPortal_Insert()
     {
-      Csla.ApplicationContext.GlobalContext.Clear();
-      ApplicationContext.GlobalContext.Add("Legacy", "Updated");
+      TestResults.Reinitialise();
+      TestResults.Add("Legacy", "Inserted");
     }
 
-    protected void DataPortal_Delete(object criteria)
+    [Update]
+		protected void DataPortal_Update()
     {
-      Csla.ApplicationContext.GlobalContext.Clear();
-      ApplicationContext.GlobalContext.Add("Legacy", "Deleted");
+      TestResults.Reinitialise();
+      TestResults.Add("Legacy", "Updated");
     }
-    protected override void DataPortal_DeleteSelf()
+
+    [Delete]
+		protected void DataPortal_Delete(object criteria)
     {
-      Csla.ApplicationContext.GlobalContext.Clear();
-      ApplicationContext.GlobalContext.Add("Legacy", "SelfDeleted");
+      TestResults.Reinitialise();
+      TestResults.Add("Legacy", "Deleted");
+    }
+
+    [DeleteSelf]
+    protected void DataPortal_DeleteSelf()
+    {
+      TestResults.Reinitialise();
+      TestResults.Add("Legacy", "SelfDeleted");
     }
 
     #endregion

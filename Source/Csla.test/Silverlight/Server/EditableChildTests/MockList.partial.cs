@@ -16,8 +16,6 @@ namespace Csla.Testing.Business.EditableChildTests
 {
   public partial class MockList
   {
-    private MockList() { }
-
     private void DataPortal_Fetch()
     {
       // fetch with no filter
@@ -30,7 +28,8 @@ namespace Csla.Testing.Business.EditableChildTests
     }
 
 
-    protected override void DataPortal_Update()
+    [Update]
+		protected void DataPortal_Update()
     {
       Child_Update();
     }

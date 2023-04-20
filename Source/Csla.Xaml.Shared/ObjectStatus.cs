@@ -1,4 +1,4 @@
-#if !NETFX_CORE && !PCL36 && !XAMARIN
+#if !XAMARIN && !WINDOWS_UWP && !MAUI
 //-----------------------------------------------------------------------
 // <copyright file="ObjectStatus.cs" company="Marimer LLC">
 //     Copyright (c) Marimer LLC. All rights reserved.
@@ -262,17 +262,17 @@ namespace Csla.Xaml
       // per-type rules
       if (DataObject != null)
       {
-        Type sourceType = DataObject.GetType();
-        var newValue = Csla.Rules.BusinessRules.HasPermission(Rules.AuthorizationActions.CreateObject, DataObject);
+        var sourceType = DataObject.GetType();
+        var newValue = Csla.Rules.BusinessRules.HasPermission(ApplicationContextManager.GetApplicationContext(), Rules.AuthorizationActions.CreateObject, DataObject);
         if (CanCreateObject != newValue)
           CanCreateObject = newValue;
-        newValue = Csla.Rules.BusinessRules.HasPermission(Rules.AuthorizationActions.GetObject, DataObject);
+        newValue = Csla.Rules.BusinessRules.HasPermission(ApplicationContextManager.GetApplicationContext(), Rules.AuthorizationActions.GetObject, DataObject);
         if (CanGetObject != newValue)
           CanGetObject = newValue;
-        newValue = Csla.Rules.BusinessRules.HasPermission(Rules.AuthorizationActions.EditObject, DataObject);
+        newValue = Csla.Rules.BusinessRules.HasPermission(ApplicationContextManager.GetApplicationContext(), Rules.AuthorizationActions.EditObject, DataObject);
         if (CanEditObject != newValue)
           CanEditObject = newValue;
-        newValue = Csla.Rules.BusinessRules.HasPermission(Rules.AuthorizationActions.DeleteObject, DataObject);
+        newValue = Csla.Rules.BusinessRules.HasPermission(ApplicationContextManager.GetApplicationContext(), Rules.AuthorizationActions.DeleteObject, DataObject);
         if (CanDeleteObject != newValue)
           CanDeleteObject = newValue;
       }

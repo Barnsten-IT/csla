@@ -20,18 +20,18 @@ Similarly, the fact that this code doesn't include a data access layer that inte
 For more detailed information about using CSLA .NET please see the [Using CSLA .NET](http://store.lhotka.net/using-csla-4-all-books) book.
 
 ## Creating the solution and Interface project
-Open Visual Studio and create a new _Console Application_ using the full .NET framework. Name it `CslaFastStart`.
+Open Visual Studio and create a new _Console Application_ using .NET 5. Name it `CslaFastStart`.
 
 ![](readme-images/CreateConsoleApp.png)
 
-Add a NuGet reference to the `CSLA-Core` package to your console app project.
+Add a reference to the `Csla` NuGet package to your console app project.
 
 ## Creating the Business layer project
 Add a new _Class Library_  project to the existing solution. Name it `BusinessLayer`.
 
 ![](readme-images/CreateBusinessLayer.png)
 
-Add a NuGet reference to the `CSLA-Core` package to your class library project.
+Add a NuGet reference to the `Csla` package to your class library project.
 
 Return to your console app project and add a project reference to your new `BusinessLayer` project.
 
@@ -389,7 +389,7 @@ namespace CslaFastStart
 At this point you should be able to run the app, seeing how it adds, updates, and deletes the data associated with a business domain object.
 
 ## Adding business rules
-One of the primary features of CSLA .NET is the rules engine that sits within the `BusinessBase` type. The rules engine is very powerful and estensible, and this fast start will only touch on the simplest validation rule concepts. Beyond this are complex validation rules, calculation and data manipulation rules, authorization rules, and much more.
+One of the primary features of CSLA .NET is the rules engine that sits within the `BusinessBase` type. The rules engine is very powerful and extensible, and this fast start will only touch on the simplest validation rule concepts. Beyond this are complex validation rules, calculation and data manipulation rules, authorization rules, and much more.
 
 CSLA .NET supports the `System.ComponentModel.DataAnnotations` attributes. These provide a very simple and limited validation rule concept that works on any platform and behind any type of interface, because the attributes are automatically integrated into the broader CSLA .NET rules engine.
 
