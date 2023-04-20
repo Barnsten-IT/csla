@@ -3175,7 +3175,7 @@ namespace Csla.Core
     /// </param>
     public virtual bool IsPropertyBusy(Csla.Core.IPropertyInfo property)
     {
-      return BusinessRules.GetPropertyBusy(property) || LoadManager.IsAlreadyLoadingProperty(property);
+      return BusinessRules.GetPropertyBusy(property) || LoadManager.IsLoadingProperty(property);
     }
 
     /// <summary>
