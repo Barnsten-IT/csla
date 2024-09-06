@@ -87,6 +87,12 @@
     <None Include="CslaKey.snk" />
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Csla.Net4.6\Csla.Net4.6.csproj">
+      <Project>{9DA591ED-C570-47AC-8E5D-35B039E07973}</Project>
+      <Name>Csla.Net4.6</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="..\Csla.Web.Mvc.Shared\Csla.Web.Mvc.Shared.projitems" Label="Shared" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
